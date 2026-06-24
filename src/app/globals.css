@@ -1,26 +1,201 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: oklch(0.985 0 0); /* Off-white #F9FAFB */
+  --foreground: oklch(0.14 0.01 240); /* Very dark slate */
+
+  --card: oklch(1 0 0); /* Pure white */
+  --card-foreground: oklch(0.14 0.01 240);
+
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.14 0.01 240);
+
+  /* Aesthetic Pastels */
+  --primary: oklch(0.6 0.15 280); /* Vibrant Indigo */
+  --primary-foreground: oklch(1 0 0);
+  
+  --secondary: oklch(0.96 0.01 240); /* Light slate */
+  --secondary-foreground: oklch(0.2 0.02 240);
+
+  --muted: oklch(0.96 0.01 240);
+  --muted-foreground: oklch(0.55 0.02 240);
+
+  --accent: oklch(0.65 0.15 310); /* Soft Pink/Purple */
+  --accent-foreground: oklch(1 0 0);
+
+  --success: oklch(0.65 0.15 150); /* Soft Teal/Green */
+  --success-foreground: oklch(1 0 0);
+
+  --warning: oklch(0.8 0.15 80); /* Soft Yellow */
+  --warning-foreground: oklch(0.2 0.05 80);
+
+  --destructive: oklch(0.65 0.18 20); /* Soft Red */
+  --destructive-foreground: oklch(1 0 0);
+
+  --border: oklch(0.92 0.01 240);
+  --input: oklch(0.92 0.01 240);
+  --ring: oklch(0.6 0.15 280);
+
+  --chart-1: oklch(0.65 0.15 280);
+  --chart-2: oklch(0.65 0.15 150);
+  --chart-3: oklch(0.8 0.15 80);
+  --chart-4: oklch(0.65 0.15 310);
+  --chart-5: oklch(0.65 0.18 20);
+
+  --radius: 1rem;
+}
+
+.dark {
+  --background: oklch(0 0 0); /* Pure Black */
+  --foreground: oklch(0.985 0 0); /* Pure White */
+
+  --card: oklch(0.08 0 0); /* Very Dark Grey for cards */
+  --card-foreground: oklch(0.985 0 0);
+
+  --popover: oklch(0.08 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+
+  --primary: oklch(0.6 0.15 280);
+  --primary-foreground: oklch(1 0 0);
+
+  --secondary: oklch(0.15 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+
+  --muted: oklch(0.15 0 0);
+  --muted-foreground: oklch(0.6 0 0);
+
+  --accent: oklch(0.65 0.15 310);
+  --accent-foreground: oklch(1 0 0);
+
+  --success: oklch(0.65 0.15 150);
+  --success-foreground: oklch(1 0 0);
+
+  --warning: oklch(0.8 0.15 80);
+  --warning-foreground: oklch(0.2 0.05 80);
+
+  --destructive: oklch(0.65 0.18 20);
+  --destructive-foreground: oklch(1 0 0);
+
+  --border: oklch(0.2 0 0);
+  --input: oklch(0.2 0 0);
+  --ring: oklch(0.6 0.15 280);
+
+  --chart-1: oklch(0.65 0.15 280);
+  --chart-2: oklch(0.65 0.15 150);
+  --chart-3: oklch(0.8 0.15 80);
+  --chart-4: oklch(0.65 0.15 310);
+  --chart-5: oklch(0.65 0.18 20);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --font-inter: var(--font-inter);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Base gradients and styles for the new aesthetic */
+.mesh-bg {
+  background-color: var(--background);
+  background-image: 
+    radial-gradient(at 0% 0%, oklch(0.9 0.05 150 / 0.3) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, oklch(0.9 0.05 280 / 0.3) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, oklch(0.9 0.05 310 / 0.3) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, oklch(0.9 0.05 80 / 0.3) 0px, transparent 50%);
+  background-size: 100% 100%;
+  background-attachment: fixed;
+}
+
+.dark .mesh-bg {
+  background-image: 
+    radial-gradient(at 0% 0%, oklch(0.15 0.05 150 / 0.2) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, oklch(0.15 0.05 280 / 0.2) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, oklch(0.15 0.05 310 / 0.2) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, oklch(0.15 0.05 80 / 0.2) 0px, transparent 50%);
+}
+
+.pastel-card {
+  @apply backdrop-blur-md bg-white/70 dark:bg-black/70 border border-white/20 dark:border-white/10 shadow-xl shadow-black/5 dark:shadow-white/5;
+}
+
+/* React Big Calendar Overrides for Aesthetic */
+.rbc-calendar {
+  @apply font-sans border-0;
+}
+.rbc-month-view, .rbc-time-view, .rbc-agenda-view {
+  @apply border border-border rounded-xl overflow-hidden bg-card/50 backdrop-blur-sm;
+}
+.rbc-header {
+  @apply py-3 font-semibold text-sm border-b border-border bg-muted/30 text-muted-foreground;
+}
+.rbc-month-row {
+  @apply border-t border-border;
+}
+.rbc-day-bg {
+  @apply border-l border-border hover:bg-accent/5 transition-colors;
+}
+.rbc-off-range-bg {
+  @apply bg-muted/20;
+}
+.rbc-event {
+  @apply rounded-md text-xs font-medium px-2 py-1 border-0 shadow-sm transition-transform hover:scale-[1.02];
+}
+.rbc-today {
+  @apply bg-primary/5;
+}
+.rbc-time-header.rbc-overflowing {
+  @apply border-r-0;
+}
+.rbc-time-content {
+  @apply border-t border-border;
+}
+.rbc-timeslot-group {
+  @apply border-b border-border min-h-[60px];
+}
+.rbc-time-gutter {
+  @apply text-xs text-muted-foreground text-right pr-2 pt-2;
+}
+.rbc-event-content {
+  @apply font-medium;
 }

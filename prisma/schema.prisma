@@ -1,0 +1,141 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  name      String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  missions  Mission[]
+}
+
+model Mission {
+  id              String        @id @default(uuid())
+  title           String
+  description     String?
+  deadline        DateTime?
+  estimatedMinutes Int?
+  actualMinutes   Int           @default(0)
+  energyRequired  String        @default("Medium") // High, Medium, Low
+  isAIScheduled   Boolean       @default(false)
+  type            String        @default("Focus") // Deep Work, Meeting, Learning, Admin, Health, Personal
+  priority        String        @default("Medium") // High, Medium, Low
+  status          String        @default("Pending") // Pending, InProgress, Completed
+  category        String?
+  context         String?
+  preferredTime   String?
+  notes           String?
+  tags            String? // Store as JSON array or comma-separated string
+  recurringRule   String? // e.g. "Daily", "Weekly", "Monthly"
+  missionScore    Int           @default(50) // Replaces successProb
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  userId          String?
+  user            User?         @relation(fields: [userId], references: [id])
+  
+  // Dependencies (Self-relation)
+  dependsOn       Mission[]     @relation("MissionDependencies")
+  dependedBy      Mission[]     @relation("MissionDependencies")
+
+  subMissions     SubMission[]
+  insight         MissionInsight?
+  suggestions     ScheduleSuggestion[]
+  scheduledBlocks ScheduledBlock[]
+  workSessions    WorkSession[]
+  activities      MissionActivity[]
+}
+
+model SubMission {
+  id              String    @id @default(uuid())
+  title           String
+  description     String?
+  estimatedMinutes Int?
+  actualMinutes   Int       @default(0)
+  difficulty      String    @default("Medium") // Hard, Medium, Easy
+  energyLevel     String    @default("Medium")
+  priority        String    @default("Medium")
+  dependencies    String?   // Store as JSON string array or simple text
+  status          String    @default("Pending")
+  order           Int       @default(0)
+  missionId       String
+  mission         Mission   @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model ScheduledBlock {
+  id              String    @id @default(uuid())
+  title           String
+  startTime       DateTime
+  endTime         DateTime
+  source          String    @default("USER") // USER, AI, GOOGLE_CALENDAR
+  type            String    @default("Focus") // Focus Zone, Recovery Zone, Meeting
+  missionId       String?
+  mission         Mission?  @relation(fields: [missionId], references: [id], onDelete: SetNull)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model WorkSession {
+  id              String    @id @default(uuid())
+  startTime       DateTime
+  endTime         DateTime?
+  durationMinutes Int?
+  energyRating    Int?      // 1-10
+  focusScore      Int?      // 1-100
+  missionId       String
+  mission         Mission   @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  createdAt       DateTime  @default(now())
+}
+
+model MissionInsight {
+  id              String    @id @default(uuid())
+  missionId       String    @unique
+  mission         Mission   @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  keyRisks        String    // JSON array or text
+  recommendations String    // JSON array or text
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model ScheduleSuggestion {
+  id              String    @id @default(uuid())
+  missionId       String
+  mission         Mission   @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  suggestedStart  DateTime
+  suggestedEnd    DateTime
+  reasoning       String
+  status          String    @default("Pending") // Pending, Accepted, Rejected
+  createdAt       DateTime  @default(now())
+}
+
+model CalendarEvent {
+  id              String    @id @default(uuid())
+  title           String
+  description     String?
+  location        String?
+  startTime       DateTime
+  endTime         DateTime
+  recurringRule   String?
+  attendees       String?   // JSON string
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model MissionActivity {
+  id              String    @id @default(uuid())
+  missionId       String
+  mission         Mission   @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  action          String    // e.g., "Created", "Status changed to InProgress", "Rescheduled"
+  createdAt       DateTime  @default(now())
+}
