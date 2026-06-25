@@ -1,7 +1,7 @@
 "use server";
 
 import { parseMissionWithGemini } from "@/lib/gemini";
-import { ChiefEngine } from "@/lib/chief-engine";
+import { ChiefEngine } from "@/lib/ai/chief-engine";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 

@@ -1,4 +1,4 @@
-import { ChiefEngine } from "@/lib/chief-engine";
+import { ChiefEngine } from "@/lib/ai/chief-engine";
 import ReactMarkdown from "react-markdown";
 
 export default async function DailyBriefingPage() {
