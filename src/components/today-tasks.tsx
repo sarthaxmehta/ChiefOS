@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { format } from "date-fns";
+import { format, isToday } from "date-fns";
 import { Trash2, CalendarClock, Edit2, CheckCircle2, Circle } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { getTasksForDate, deleteScheduledTask, updateTaskStatus, getFilteredMissions } from "@/app/dashboard/actions";
 import { toast } from "sonner";
-import { isToday } from "date-fns";
 import { FilterMode } from "@/app/dashboard/page";
 
 type ScheduledTaskData = Awaited<ReturnType<typeof getTasksForDate>>[0];
@@ -149,102 +149,114 @@ export function TodayTasks({
               <p className="text-sm font-medium text-slate-500">No tasks found in this category.</p>
             </div>
           ) : filterMode === "date" ? (
-            scheduledTasks.map((task) => {
-              const isDone = task.mission?.status === "Completed";
-              
-              return (
-                <div 
-                  key={task.id} 
-                  className="group bg-white/60 dark:bg-slate-800/60 hover:bg-white/80 dark:hover:bg-slate-800 backdrop-blur-md rounded-2xl p-4 border border-white/80 dark:border-white/10 shadow-sm flex items-center justify-between transition-all"
-                >
-                  <div className="flex items-center gap-4">
-                    <button 
-                      onClick={() => task.missionId && handleToggleStatus(task.missionId, task.mission!.status)}
-                      disabled={!task.missionId}
-                      className="shrink-0 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors disabled:opacity-50"
-                    >
-                      {isDone ? <CheckCircle2 className="w-6 h-6 text-primary" /> : <Circle className="w-6 h-6" />}
-                    </button>
-                    
-                    <div className="flex flex-col">
-                      <span className={`text-sm font-semibold transition-all ${isDone ? "text-slate-400 line-through" : "text-slate-700 dark:text-slate-200"}`}>
-                        {task.title}
-                      </span>
-                      <span className="text-[11px] font-medium text-slate-500 mt-0.5">
-                        {format(new Date(task.startTime), "h:mm a")} - {format(new Date(task.endTime), "h:mm a")}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1 opacity-40 group-hover:opacity-100 transition-opacity">
-                    <button className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors" title="Edit">
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors" title="Reschedule">
-                      <CalendarClock className="w-4 h-4" />
-                    </button>
-                    <button 
-                      onClick={() => handleDelete(task.id)}
-                      className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" 
-                      title="Delete"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            missions.map((mission) => {
-              const isDone = mission.status === "Completed";
-              // If it's planned, it has scheduled blocks
-              // We'll show the dates from the blocks
-              const blockDates = "scheduledBlocks" in mission && Array.isArray((mission as any).scheduledBlocks) 
-                ? (mission as any).scheduledBlocks.map((b: any) => format(new Date(b.startTime), "MMM do")).join(", ")
-                : null;
-              
-              return (
-                <div 
-                  key={mission.id} 
-                  className="group bg-white/60 dark:bg-slate-800/60 hover:bg-white/80 dark:hover:bg-slate-800 backdrop-blur-md rounded-2xl p-4 border border-white/80 dark:border-white/10 shadow-sm flex items-center justify-between transition-all"
-                >
-                  <div className="flex items-center gap-4">
-                    <button 
-                      onClick={() => handleToggleStatus(mission.id, mission.status)}
-                      className="shrink-0 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
-                    >
-                      {isDone ? <CheckCircle2 className="w-6 h-6 text-primary" /> : <Circle className="w-6 h-6" />}
-                    </button>
-                    
-                    <div className="flex flex-col">
-                      <span className={`text-sm font-semibold transition-all ${isDone ? "text-slate-400 line-through" : "text-slate-700 dark:text-slate-200"}`}>
-                        {mission.title}
-                      </span>
-                      {blockDates && blockDates.length > 0 && (
-                        <span className="text-[11px] font-medium text-slate-500 mt-0.5">
-                          Scheduled for: {blockDates}
+            <AnimatePresence mode="popLayout">
+              {scheduledTasks.map((task) => {
+                const isDone = task.mission?.status === "Completed";
+                
+                return (
+                  <motion.div 
+                    layout
+                    initial={{ opacity: 0, y: 20, scale: 0.95, filter: "blur(4px)" }}
+                    animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+                    exit={{ opacity: 0, scale: 0.9, filter: "blur(4px)" }}
+                    transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                    key={task.id} 
+                    className="group bg-white/60 dark:bg-slate-800/60 hover:bg-white/80 dark:hover:bg-slate-800 backdrop-blur-md rounded-2xl p-4 border border-white/80 dark:border-white/10 shadow-sm flex items-center justify-between transition-all"
+                  >
+                    <div className="flex items-center gap-4">
+                      <button 
+                        onClick={() => task.missionId && handleToggleStatus(task.missionId, task.mission!.status)}
+                        disabled={!task.missionId}
+                        className="shrink-0 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors disabled:opacity-50"
+                      >
+                        {isDone ? <CheckCircle2 className="w-6 h-6 text-primary" /> : <Circle className="w-6 h-6" />}
+                      </button>
+                      
+                      <div className="flex flex-col">
+                        <span className={`text-sm font-semibold transition-all ${isDone ? "text-slate-400 line-through" : "text-slate-700 dark:text-slate-200"}`}>
+                          {task.title}
                         </span>
-                      )}
+                        <span className="text-[11px] font-medium text-slate-500 mt-0.5">
+                          {format(new Date(task.startTime), "h:mm a")} - {format(new Date(task.endTime), "h:mm a")}
+                        </span>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-1 opacity-40 group-hover:opacity-100 transition-opacity">
-                    <button className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors" title="Edit">
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors" title="Reschedule">
-                      <CalendarClock className="w-4 h-4" />
-                    </button>
-                    <button 
-                      className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" 
-                      title="Delete"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })
+                    <div className="flex items-center gap-1 opacity-40 group-hover:opacity-100 transition-opacity">
+                      <button className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors" title="Edit">
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors" title="Reschedule">
+                        <CalendarClock className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(task.id)}
+                        className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" 
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          ) : (
+            <AnimatePresence mode="popLayout">
+              {missions.map((mission) => {
+                const isDone = mission.status === "Completed";
+                const blockDates = "scheduledBlocks" in mission && Array.isArray((mission as any).scheduledBlocks) 
+                  ? (mission as any).scheduledBlocks.map((b: any) => format(new Date(b.startTime), "MMM do")).join(", ")
+                  : null;
+                
+                return (
+                  <motion.div 
+                    layout
+                    initial={{ opacity: 0, y: 20, scale: 0.95, filter: "blur(4px)" }}
+                    animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+                    exit={{ opacity: 0, scale: 0.9, filter: "blur(4px)" }}
+                    transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                    key={mission.id} 
+                    className="group bg-white/60 dark:bg-slate-800/60 hover:bg-white/80 dark:hover:bg-slate-800 backdrop-blur-md rounded-2xl p-4 border border-white/80 dark:border-white/10 shadow-sm flex items-center justify-between transition-all"
+                  >
+                    <div className="flex items-center gap-4">
+                      <button 
+                        onClick={() => handleToggleStatus(mission.id, mission.status)}
+                        className="shrink-0 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                      >
+                        {isDone ? <CheckCircle2 className="w-6 h-6 text-primary" /> : <Circle className="w-6 h-6" />}
+                      </button>
+                      
+                      <div className="flex flex-col">
+                        <span className={`text-sm font-semibold transition-all ${isDone ? "text-slate-400 line-through" : "text-slate-700 dark:text-slate-200"}`}>
+                          {mission.title}
+                        </span>
+                        {blockDates && blockDates.length > 0 && (
+                          <span className="text-[11px] font-medium text-slate-500 mt-0.5">
+                            Scheduled for: {blockDates}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 opacity-40 group-hover:opacity-100 transition-opacity">
+                      <button className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors" title="Edit">
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors" title="Reschedule">
+                        <CalendarClock className="w-4 h-4" />
+                      </button>
+                      <button 
+                        className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" 
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
           )}
         </div>
 

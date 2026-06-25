@@ -43,10 +43,10 @@ export default function TodayView() {
               <AnimatePresence mode="popLayout">
                 <motion.h1 
                   key={selectedDate.getTime()}
-                  initial={{ y: 40, opacity: 0, scale: 0.9 }}
-                  animate={{ y: 0, opacity: 1, scale: 1 }}
-                  exit={{ y: -40, opacity: 0, scale: 0.9 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                  initial={{ y: 50, opacity: 0, scale: 0.8, filter: "blur(10px)" }}
+                  animate={{ y: 0, opacity: 1, scale: 1, filter: "blur(0px)" }}
+                  exit={{ y: -50, opacity: 0, scale: 0.8, filter: "blur(10px)" }}
+                  transition={{ type: "spring", stiffness: 350, damping: 25 }}
                   className="text-7xl font-bold tracking-tighter text-slate-800 dark:text-slate-100"
                 >
                   {format(selectedDate, "dd")}
@@ -58,9 +58,9 @@ export default function TodayView() {
                 <AnimatePresence mode="popLayout">
                   <motion.span 
                     key={selectedDate.getTime()}
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: -20, opacity: 0 }}
+                    initial={{ y: 20, opacity: 0, filter: "blur(5px)" }}
+                    animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
+                    exit={{ y: -20, opacity: 0, filter: "blur(5px)" }}
                     transition={{ type: "spring", stiffness: 300, damping: 25, delay: 0.05 }}
                     className="text-2xl font-semibold text-slate-700 dark:text-slate-200 leading-none tracking-tight"
                   >

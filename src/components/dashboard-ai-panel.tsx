@@ -1,9 +1,16 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { X, Send, BotMessageSquare } from "lucide-react";
+import { X, Send, BotMessageSquare, User } from "lucide-react";
+import { useChat } from "@ai-sdk/react";
 
 export function DashboardAIPanel({ onClose }: { onClose: () => void }) {
+  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
+    api: "/api/chief/chat",
+    initialMessages: [
+      { id: "1", role: "assistant", content: "Hello Chief. How can I help you optimize your schedule today?" }
+    ]
+  });
   return (
     <motion.div
       initial={{ opacity: 0, width: 0, y: 150, scale: 0.8 }}
@@ -30,23 +37,57 @@ export function DashboardAIPanel({ onClose }: { onClose: () => void }) {
         {/* AI Card content */}
         <div className="flex-1 bg-white/60 dark:bg-slate-900/60 backdrop-blur-3xl border border-white/60 dark:border-white/10 rounded-[2rem] flex flex-col shadow-[0_8px_32px_0_rgba(0,0,0,0.08)] overflow-hidden">
           <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4 mt-2">
-          <div className="bg-white/80 dark:bg-slate-800 rounded-2xl rounded-tl-sm p-4 text-sm text-slate-700 dark:text-slate-200 self-start max-w-[85%] border border-white/60 dark:border-white/5 shadow-sm">
-            Hello Chief. How can I help you optimize your schedule today?
+            {messages.map((m) => (
+              <div 
+                key={m.id} 
+                className={`flex items-start gap-2 max-w-[85%] ${m.role === "user" ? "self-end flex-row-reverse" : "self-start"}`}
+              >
+                {m.role === "assistant" && (
+                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1">
+                    <BotMessageSquare className="w-3.5 h-3.5 text-primary" />
+                  </div>
+                )}
+                <div 
+                  className={`rounded-2xl p-3 text-sm border shadow-sm ${
+                    m.role === "user" 
+                      ? "bg-primary text-primary-foreground border-primary rounded-tr-sm" 
+                      : "bg-white/80 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-white/60 dark:border-white/5 rounded-tl-sm"
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap leading-relaxed">{m.content}</p>
+                </div>
+              </div>
+            ))}
+            {isLoading && (
+               <div className="self-start flex items-center gap-2 max-w-[85%]">
+                 <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <BotMessageSquare className="w-3.5 h-3.5 text-primary" />
+                  </div>
+                 <div className="bg-white/80 dark:bg-slate-800 rounded-2xl rounded-tl-sm p-4 text-sm border border-white/60 dark:border-white/5 shadow-sm">
+                   <div className="flex gap-1.5 items-center">
+                     <span className="w-1.5 h-1.5 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "0ms" }} />
+                     <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "150ms" }} />
+                     <span className="w-1.5 h-1.5 rounded-full bg-primary/80 animate-bounce" style={{ animationDelay: "300ms" }} />
+                   </div>
+                 </div>
+               </div>
+            )}
           </div>
-        </div>
 
-        <div className="p-4 bg-white/40 dark:bg-black/20 border-t border-white/40 dark:border-white/10 shrink-0">
+        <form onSubmit={handleSubmit} className="p-4 bg-white/40 dark:bg-black/20 border-t border-white/40 dark:border-white/10 shrink-0">
           <div className="relative">
             <input 
               type="text" 
+              value={input}
+              onChange={handleInputChange}
               placeholder="Ask Chief OS..." 
               className="w-full h-11 bg-white/80 dark:bg-slate-800 rounded-xl pl-4 pr-12 text-sm border border-white/80 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-800 dark:text-slate-100 placeholder:text-slate-400"
             />
-            <button className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 bg-slate-900 dark:bg-white text-white dark:text-black rounded-lg hover:scale-105 transition-transform">
+            <button type="submit" disabled={isLoading || !input.trim()} className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 bg-slate-900 dark:bg-white text-white dark:text-black rounded-lg hover:scale-105 transition-transform disabled:opacity-50 disabled:hover:scale-100">
               <Send className="w-3.5 h-3.5" />
             </button>
           </div>
-        </div>
+        </form>
       </div>
       </div>
     </motion.div>

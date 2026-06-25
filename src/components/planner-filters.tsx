@@ -29,20 +29,6 @@ export function PlannerFilters({
       </button>
 
       <button 
-        onClick={() => onFilterChange("planned")}
-        className={`flex-1 flex items-center justify-center py-2 rounded-xl transition-all ${
-          filterMode === "planned" 
-            ? "bg-white/80 dark:bg-slate-800 shadow-sm border border-white/60 dark:border-white/10" 
-            : "hover:bg-white/50 dark:hover:bg-white/5 border border-transparent"
-        }`}
-      >
-        <div className="flex items-center gap-2">
-          <CheckCircle2 className={`w-4 h-4 ${filterMode === "planned" ? "text-slate-800 dark:text-slate-100" : "text-slate-500 dark:text-slate-400"}`} />
-          <span className={`font-semibold text-[11px] uppercase tracking-wider ${filterMode === "planned" ? "text-slate-800 dark:text-slate-100" : "text-slate-600 dark:text-slate-400"}`}>Planned</span>
-        </div>
-      </button>
-
-      <button 
         onClick={() => onFilterChange("all")}
         className={`flex-1 flex items-center justify-center py-2 rounded-xl transition-all ${
           filterMode === "all" 

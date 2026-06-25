@@ -15,8 +15,19 @@ model User {
   email     String    @unique
   name      String?
   createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  missions  Mission[]
+  updatedAt   DateTime  @updatedAt
+  missions    Mission[]
+  preferences UserPreferences?
+}
+
+model UserPreferences {
+  id                   String   @id @default(uuid())
+  userId               String   @unique
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workDayStart         Int      @default(9)  // 9 AM
+  workDayEnd           Int      @default(18) // 6 PM
+  preferredFocusWindow String   @default("Morning") // Morning, Afternoon, Evening
+  updatedAt            DateTime @updatedAt
 }
 
 model Mission {

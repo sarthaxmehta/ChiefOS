@@ -9,10 +9,12 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@ai-sdk/google": "^3.0.83",
     "@base-ui/react": "^1.6.0",
     "@google/generative-ai": "^0.24.1",
     "@radix-ui/react-tooltip": "^1.2.10",
     "@types/react-big-calendar": "^1.16.3",
+    "ai": "^6.0.209",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
