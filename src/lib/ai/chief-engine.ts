@@ -75,8 +75,12 @@ export class ChiefEngine {
     const { RiskEngine } = await import("./risk-engine");
     const { MemoryEngine } = await import("./memory-engine");
     const { generateObject } = await import('ai');
-    const { google } = await import('@ai-sdk/google');
+    const { createGoogleGenerativeAI } = await import('@ai-sdk/google');
     const { z } = await import('zod');
+
+    const google = createGoogleGenerativeAI({
+      apiKey: process.env.GEMINI_API_KEY,
+    });
 
     const risk = await RiskEngine.evaluateWorkloadRisk();
     const memory = await MemoryEngine.getProductivityPatterns();

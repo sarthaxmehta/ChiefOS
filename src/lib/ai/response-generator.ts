@@ -1,5 +1,9 @@
 import { streamText } from 'ai';
-import { google } from '@ai-sdk/google';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+
+const google = createGoogleGenerativeAI({
+  apiKey: process.env.GEMINI_API_KEY,
+});
 import { format } from 'date-fns';
 
 export class ResponseGenerator {
