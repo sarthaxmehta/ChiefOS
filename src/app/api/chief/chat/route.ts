@@ -16,10 +16,16 @@ export async function POST(req: Request) {
 
     const stream = await ChiefEngine.processMessage(latestMessage, sanitizedHistory);
     
-    // Convert the stream to a readable web stream response
-    return stream.toDataStreamResponse();
+    // Use the latest AI SDK v6 method for returning UI Message streams
+    if (typeof stream.toUIMessageStreamResponse === "function") {
+      return stream.toUIMessageStreamResponse();
+    } else if (typeof stream.toTextStreamResponse === "function") {
+      return stream.toTextStreamResponse();
+    } else {
+      throw new Error("Could not find a valid stream response method on the AI SDK stream object.");
+    }
   } catch (error) {
     console.error("Chief API Error:", error);
-    return new Response("Internal Server Error", { status: 500 });
+    return new Response(error instanceof Error ? error.stack : String(error), { status: 500 });
   }
 }

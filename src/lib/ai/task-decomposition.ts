@@ -26,7 +26,7 @@ export class TaskDecompositionEngine {
   static async breakDownTask(topic: string): Promise<DecomposedTask> {
     try {
       const { object } = await generateObject({
-        model: google('gemini-2.0-flash'),
+        model: google('gemini-2.5-flash'),
         schema: TaskDecompositionSchema,
         system: `You are the Task Decomposition Engine for ChiefOS.
           Your ONLY job is to break a complex topic down into 3-5 concrete, actionable subtasks.

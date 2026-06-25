@@ -86,7 +86,7 @@ export class ChiefEngine {
     const memory = await MemoryEngine.getProductivityPatterns();
 
     const { object } = await generateObject({
-      model: google('gemini-2.0-flash'),
+      model: google('gemini-2.5-flash'),
       schema: z.object({ briefing: z.string() }),
       prompt: `Generate a markdown daily briefing for the ChiefOS user. 
         Risk Level: ${risk.riskLevel}. Pending Tasks: ${risk.totalPendingTasks}. 

@@ -30,7 +30,7 @@ export class ResponseGenerator {
     `;
 
     return streamText({
-      model: google('gemini-2.0-flash'),
+      model: google('gemini-2.5-flash'),
       system: systemPrompt,
       messages: [
         ...history,

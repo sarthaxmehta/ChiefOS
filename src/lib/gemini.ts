@@ -9,7 +9,7 @@ export async function parseMissionWithGemini(input: string) {
     return null;
   }
   
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
   
   const prompt = `
     You are an AI Chief of Staff. Parse the following user input and extract a mission definition.
@@ -37,7 +37,7 @@ export async function parseMissionWithGemini(input: string) {
 
 export async function generateMissionInsight(title: string, context: string, deadline: Date | null) {
   if (!apiKey) return null;
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
   
   const prompt = `
     You are an AI Chief of Staff analyzing a mission.
@@ -64,7 +64,7 @@ export async function generateMissionInsight(title: string, context: string, dea
 
 export async function generateSubMissionsWithIntelligence(title: string, context: string) {
   if (!apiKey) return null;
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
   
   const prompt = `
     You are an AI Chief of Staff breaking down a mission into 3-5 actionable sub-missions.

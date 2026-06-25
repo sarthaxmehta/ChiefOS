@@ -38,7 +38,7 @@ export class IntentEngine {
   static async parseIntent(userMessage: string, history: any[] = []): Promise<ParsedIntent> {
     try {
       const { object } = await generateObject({
-        model: google('gemini-2.0-flash'),
+        model: google('gemini-2.5-flash'),
         schema: IntentSchema,
         system: `You are the Intent Engine for ChiefOS, a deterministic productivity system.
           Your ONLY job is to classify the user's message into an executable intent.
