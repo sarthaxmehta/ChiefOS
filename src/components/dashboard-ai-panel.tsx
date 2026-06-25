@@ -37,23 +37,23 @@ export function DashboardAIPanel({ onClose }: { onClose: () => void }) {
           <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4 mt-2">
             {messages.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center px-4">
-                <div className="relative w-28 h-28 mb-8">
-                  {/* Glowing Orb */}
+                <div className="relative w-32 h-32 mb-8 flex items-center justify-center">
+                  <motion.div 
+                    animate={{ 
+                      scale: [1, 1.15, 1],
+                      opacity: [0.6, 0.8, 0.6]
+                    }}
+                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                    className="absolute w-28 h-28 rounded-full bg-[#FF8C42]/50 blur-2xl"
+                  />
                   <motion.div 
                     animate={{ 
                       scale: [1, 1.05, 1],
-                      opacity: [0.8, 1, 0.8]
                     }}
-                    transition={{ 
-                      duration: 4,
-                      repeat: Infinity,
-                      ease: "easeInOut"
-                    }}
-                    className="absolute inset-0 rounded-full bg-gradient-to-tr from-yellow-300 via-orange-500 to-rose-500 blur-xl opacity-80"
+                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+                    className="relative w-20 h-20 rounded-full shadow-lg"
+                    style={{ background: "linear-gradient(to top right, #F5D061 0%, #FF6B6B 100%)" }}
                   />
-                  <div className="absolute inset-2 rounded-full bg-gradient-to-tr from-yellow-200 via-orange-400 to-rose-500 shadow-[inset_0_-10px_20px_rgba(0,0,0,0.1)] overflow-hidden">
-                    <div className="absolute top-0 right-0 w-16 h-16 bg-white/40 blur-2xl rounded-full" />
-                  </div>
                 </div>
                 <h3 className="text-[15px] font-medium text-slate-800 dark:text-slate-200 leading-relaxed max-w-[280px]">
                   Chief OS AI is ready to optimize your dashboard and coordinate your schedule.
@@ -100,16 +100,16 @@ export function DashboardAIPanel({ onClose }: { onClose: () => void }) {
           </div>
 
         <div className="p-4 shrink-0 pb-6">
-          <form onSubmit={handleSubmit} className="relative bg-white dark:bg-slate-800 shadow-[0_2px_20px_rgba(0,0,0,0.06)] border border-slate-100 dark:border-white/10 rounded-2xl flex items-center p-1.5 px-3">
+          <form onSubmit={handleSubmit} className="relative bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-white/10 rounded-2xl flex items-center p-2">
             <input 
               type="text" 
               value={input}
               onChange={handleInputChange}
-              placeholder="Ask Chief OS..." 
-              className="flex-1 h-10 bg-transparent text-sm focus:outline-none text-slate-800 dark:text-slate-100 placeholder:text-slate-400 min-w-0"
+              placeholder="" 
+              className="flex-1 h-10 bg-transparent text-sm focus:outline-none text-slate-800 dark:text-slate-100 placeholder:text-slate-400 px-3 min-w-0"
             />
-            <button type="submit" disabled={isLoading || !input?.trim()} className="ml-2 w-8 h-8 flex items-center justify-center bg-slate-900 dark:bg-white text-white dark:text-black rounded-full hover:scale-105 transition-transform disabled:opacity-50 disabled:hover:scale-100 shrink-0">
-              <Send className="w-3.5 h-3.5 -ml-0.5" />
+            <button type="submit" disabled={isLoading || !input?.trim()} className="ml-2 w-10 h-10 flex items-center justify-center bg-[#8b8b93] text-white rounded-full hover:bg-slate-700 transition-colors disabled:opacity-50 shrink-0">
+              <Send className="w-4 h-4 -ml-0.5" />
             </button>
           </form>
         </div>
