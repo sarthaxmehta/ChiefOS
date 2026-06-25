@@ -83,7 +83,7 @@ export function DashboardAIPanel({ onClose }: { onClose: () => void }) {
               placeholder="Ask Chief OS..." 
               className="w-full h-11 bg-white/80 dark:bg-slate-800 rounded-xl pl-4 pr-12 text-sm border border-white/80 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-primary/50 text-slate-800 dark:text-slate-100 placeholder:text-slate-400"
             />
-            <button type="submit" disabled={isLoading || !input.trim()} className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 bg-slate-900 dark:bg-white text-white dark:text-black rounded-lg hover:scale-105 transition-transform disabled:opacity-50 disabled:hover:scale-100">
+            <button type="submit" disabled={isLoading || !input?.trim()} className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 bg-slate-900 dark:bg-white text-white dark:text-black rounded-lg hover:scale-105 transition-transform disabled:opacity-50 disabled:hover:scale-100">
               <Send className="w-3.5 h-3.5" />
             </button>
           </div>
