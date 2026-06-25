@@ -113,6 +113,7 @@ export function DashboardAIPanel({ onClose }: { onClose: () => void }) {
             </button>
           </form>
         </div>
+        </div>
       </div>
     </motion.div>
   );
