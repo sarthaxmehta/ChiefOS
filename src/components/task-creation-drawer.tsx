@@ -91,8 +91,13 @@ export function TaskCreationDrawer({ isOpen, onClose }: TaskCreationDrawerProps)
       return;
     }
 
-    if (scheduleNow && (!scheduledDate || !startTime || !endTime)) {
-      toast.error("Please provide Date, Start Time, and End Time to schedule.");
+    if (scheduleNow && !scheduledDate) {
+      toast.error("Please provide a Date to schedule.");
+      return;
+    }
+
+    if (scheduleNow && ((startTime && !endTime) || (!startTime && endTime))) {
+      toast.error("Please provide both Start and End times, or leave both blank for a planned task without time.");
       return;
     }
 
