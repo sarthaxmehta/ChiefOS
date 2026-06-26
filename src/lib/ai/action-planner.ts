@@ -44,16 +44,33 @@ export class ActionPlanner {
       }
     });
 
-    // 2. If duration is provided, find schedule options
-    let schedulingOptions = [];
+    // 2. If duration is provided, find schedule options and auto-schedule it
+    let schedulingOptions: any[] = [];
+    let scheduledBlock = null;
     if (data.durationMinutes) {
-      schedulingOptions = await SchedulingEngine.findAvailableSlots(data.durationMinutes);
+      const targetDate = data.targetDateIso ? new Date(data.targetDateIso) : new Date();
+      schedulingOptions = await SchedulingEngine.findAvailableSlots(data.durationMinutes, targetDate);
+      
+      // Auto-schedule in the first available slot
+      if (schedulingOptions.length > 0) {
+        scheduledBlock = await prisma.scheduledBlock.create({
+          data: {
+            title: data.title,
+            startTime: schedulingOptions[0].start,
+            endTime: schedulingOptions[0].end,
+            source: "AI",
+            type: "Focus",
+            missionId: mission.id
+          }
+        });
+      }
     }
 
     return {
       type: 'task_created',
       mission,
-      schedulingOptions
+      schedulingOptions,
+      scheduledBlock
     };
   }
 

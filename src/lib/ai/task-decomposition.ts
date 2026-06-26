@@ -1,9 +1,5 @@
 import { generateObject } from 'ai';
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
-
-const google = createGoogleGenerativeAI({
-  apiKey: process.env.GEMINI_API_KEY,
-});
+import { getAIModel } from './model-provider';
 import { z } from 'zod';
 
 export const TaskDecompositionSchema = z.object({
@@ -26,7 +22,7 @@ export class TaskDecompositionEngine {
   static async breakDownTask(topic: string): Promise<DecomposedTask> {
     try {
       const { object } = await generateObject({
-        model: google('gemini-2.5-flash'),
+        model: getAIModel(),
         schema: TaskDecompositionSchema,
         system: `You are the Task Decomposition Engine for ChiefOS.
           Your ONLY job is to break a complex topic down into 3-5 concrete, actionable subtasks.

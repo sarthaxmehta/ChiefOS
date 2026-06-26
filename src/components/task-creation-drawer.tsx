@@ -8,6 +8,15 @@ import { toast } from "sonner";
 import { createMission } from "@/app/dashboard/actions";
 import { useHotkeys } from "react-hotkeys-hook";
 
+const COLORS = [
+  { name: "Red", value: "Red", class: "bg-red-500 hover:bg-red-600 ring-red-500" },
+  { name: "Blue", value: "Blue", class: "bg-blue-500 hover:bg-blue-600 ring-blue-500" },
+  { name: "Green", value: "Green", class: "bg-green-500 hover:bg-green-600 ring-green-500" },
+  { name: "Purple", value: "Purple", class: "bg-purple-500 hover:bg-purple-600 ring-purple-500" },
+  { name: "Yellow", value: "Yellow", class: "bg-yellow-500 hover:bg-yellow-600 ring-yellow-500" },
+  { name: "Orange", value: "Orange", class: "bg-orange-500 hover:bg-orange-600 ring-orange-500" }
+];
+
 interface TaskCreationDrawerProps {
   isOpen: boolean;
   onClose: () => void;
@@ -22,7 +31,10 @@ export function TaskCreationDrawer({ isOpen, onClose }: TaskCreationDrawerProps)
   const [type, setType] = useState("One Time");
   
   // Section 3: Priority
-  const [priority, setPriority] = useState("Medium");
+  const [priority, setPriority] = useState("Low");
+
+  // Section 3.5: Color Label
+  const [color, setColor] = useState("Red");
 
   // Section 4: Frequency (Only for Recurring/Habit)
   const [recurringRule, setRecurringRule] = useState("Daily");
@@ -95,6 +107,7 @@ export function TaskCreationDrawer({ isOpen, onClose }: TaskCreationDrawerProps)
         startTime: scheduleNow && startTime ? startTime : null,
         endTime: scheduleNow && endTime ? endTime : null,
         category,
+        color,
         subtasks: subtasks.map(s => s.title),
         tags,
         notes
@@ -108,6 +121,7 @@ export function TaskCreationDrawer({ isOpen, onClose }: TaskCreationDrawerProps)
       setSubtasks([]);
       setTags([]);
       setNotes("");
+      setColor("Red");
     } catch (error: any) {
       toast.error(error.message || "Failed to create task");
     }
@@ -263,10 +277,30 @@ export function TaskCreationDrawer({ isOpen, onClose }: TaskCreationDrawerProps)
               <section className="space-y-3">
                 <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Category</h3>
                 <div className="flex flex-wrap gap-2">
-                  {["Study", "Work", "Health", "Personal", "Finance", "Custom"].map((c) => (
+                  {["Study", "Work", "Health", "Personal", "Finance", "Payment", "Custom"].map((c) => (
                     <button key={c} onClick={() => setCategory(c)} className={`px-4 py-2 rounded-xl text-sm font-semibold border transition-all ${category === c ? "bg-slate-900 dark:bg-white text-white dark:text-black border-transparent" : "bg-transparent text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/10 hover:border-slate-400"}`}>
                       {c}
                     </button>
+                  ))}
+                </div>
+              </section>
+
+              {/* Sec 6.5: Label Color */}
+              <section className="space-y-3">
+                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Label Color</h3>
+                <div className="flex items-center gap-3 flex-wrap">
+                  {COLORS.map((c) => (
+                    <button
+                      key={c.name}
+                      type="button"
+                      onClick={() => setColor(c.name)}
+                      title={c.name}
+                      className={`w-8 h-8 rounded-full transition-all ${c.class} ${
+                        color === c.name 
+                          ? "ring-2 ring-offset-2 ring-offset-background scale-110" 
+                          : "opacity-70 hover:opacity-100"
+                      }`}
+                    />
                   ))}
                 </div>
               </section>
@@ -328,7 +362,14 @@ export function TaskCreationDrawer({ isOpen, onClose }: TaskCreationDrawerProps)
             <div className="w-[380px] bg-slate-50 dark:bg-slate-900/20 border-l border-slate-200 dark:border-white/10 p-8 flex flex-col items-center">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-8 w-full text-center">Live Preview</h3>
               
-              <div className="w-full bg-white dark:bg-[#111] rounded-2xl shadow-xl shadow-black/5 border border-slate-200 dark:border-white/10 p-6 flex flex-col gap-4 sticky top-8 hover:scale-[1.02] transition-transform">
+              <div className={`w-full bg-white dark:bg-[#111] rounded-2xl shadow-xl shadow-black/5 border border-slate-200 dark:border-white/10 p-6 flex flex-col gap-4 sticky top-8 hover:scale-[1.02] transition-transform border-l-4 ${
+                color === "Red" ? "border-l-red-500" :
+                color === "Blue" ? "border-l-blue-500" :
+                color === "Green" ? "border-l-green-500" :
+                color === "Purple" ? "border-l-purple-500" :
+                color === "Yellow" ? "border-l-yellow-500" :
+                color === "Orange" ? "border-l-orange-500" : "border-l-primary"
+              }`}>
                 <div className="flex justify-between items-start gap-4">
                   <h4 className="font-bold text-xl text-slate-800 dark:text-slate-100 tracking-tight leading-tight">
                     {title || "Untitled Task"}

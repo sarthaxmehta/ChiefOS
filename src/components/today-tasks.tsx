@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { format, isToday } from "date-fns";
 import { Trash2, CalendarClock, Edit2, CheckCircle2, Circle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -24,34 +24,35 @@ export function TodayTasks({
   const [missions, setMissions] = useState<MissionData[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      if (filterMode === "date") {
-        const tasks = await getTasksForDate(selectedDate.toISOString());
-        const sortedTasks = [...tasks].sort((a, b) => {
-          const aDone = a.mission?.status === "Completed";
-          const bDone = b.mission?.status === "Completed";
-          if (aDone === bDone) return 0;
-          return aDone ? 1 : -1;
-        });
-        setScheduledTasks(sortedTasks);
-        setMissions([]);
-      } else {
-        const missionsData = await getFilteredMissions(filterMode);
-        const sortedMissions = [...missionsData].sort((a, b) => {
-          const aDone = a.status === "Completed";
-          const bDone = b.status === "Completed";
-          if (aDone === bDone) return 0;
-          return aDone ? 1 : -1;
-        });
-        setMissions(sortedMissions);
-        setScheduledTasks([]);
-      }
-      setLoading(false);
+  const fetchTasks = useCallback(async () => {
+    setLoading(true);
+    if (filterMode === "date") {
+      const tasks = await getTasksForDate(selectedDate.toISOString());
+      const sortedTasks = [...tasks].sort((a, b) => {
+        const aDone = a.mission?.status === "Completed";
+        const bDone = b.mission?.status === "Completed";
+        if (aDone === bDone) return 0;
+        return aDone ? 1 : -1;
+      });
+      setScheduledTasks(sortedTasks);
+      setMissions([]);
+    } else {
+      const missionsData = await getFilteredMissions(filterMode);
+      const sortedMissions = [...missionsData].sort((a, b) => {
+        const aDone = a.status === "Completed";
+        const bDone = b.status === "Completed";
+        if (aDone === bDone) return 0;
+        return aDone ? 1 : -1;
+      });
+      setMissions(sortedMissions);
+      setScheduledTasks([]);
     }
-    load();
+    setLoading(false);
   }, [selectedDate, filterMode]);
+
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
 
   const handleToggleStatus = async (missionId: string, currentStatus: string) => {
     try {

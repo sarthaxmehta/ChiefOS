@@ -4,7 +4,7 @@ const data = JSON.stringify({
   messages: [{ role: 'user', content: 'hi' }]
 });
 
-const req = http.request('http://localhost:3000/api/chief/chat', {
+const req = http.request('http://localhost:3001/api/chief/chat', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',

@@ -17,9 +17,9 @@ export async function captureMission(input: string) {
     const newMission = await prisma.mission.create({
       data: {
         title: parsedData.title,
-        deadline: parsedData.deadline ? new Date(parsedData.deadline) : null,
+        date: parsedData.deadline ? new Date(parsedData.deadline) : null,
         estimatedMinutes: (parsedData.estimatedHours || 1) * 60,
-        priority: parsedData.priority || "Medium",
+        priority: parsedData.priority || "Low",
         category: parsedData.category || "General",
         context: input,
       }
@@ -40,7 +40,7 @@ export async function captureMission(input: string) {
       data: {
         title: input.slice(0, 50) + (input.length > 50 ? "..." : ""),
         estimatedMinutes: 60,
-        priority: "Medium",
+        priority: "Low",
         category: "General",
         context: input,
       }
@@ -78,5 +78,29 @@ export async function generateBriefingAction() {
     return { success: true, briefing };
   } catch (e) {
     return { success: false, briefing: "Failed to generate AI briefing." };
+  }
+}
+export async function createManualMissionAction(data: any) {
+  try {
+    const newMission = await prisma.mission.create({
+      data: {
+        title: data.title,
+        description: data.description || null,
+        priority: data.priority || "Low",
+        date: data.date ? new Date(data.date) : null,
+        startTime: data.startTime ? new Date(data.startTime) : null,
+        endTime: data.endTime ? new Date(data.endTime) : null,
+        category: data.category || "General",
+        color: data.color || "Red",
+        notes: data.notes || null,
+        recurringRule: data.recurringRule || null,
+      }
+    });
+
+    revalidatePath("/dashboard");
+    return { success: true, mission: newMission };
+  } catch (error) {
+    console.error("Failed to create manual mission:", error);
+    return { success: false, error: "Failed to create task" };
   }
 }

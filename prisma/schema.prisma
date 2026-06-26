@@ -34,18 +34,21 @@ model Mission {
   id              String        @id @default(uuid())
   title           String
   description     String?
-  deadline        DateTime?
+  date            DateTime?
+  startTime       DateTime?
+  endTime         DateTime?
   estimatedMinutes Int?
   actualMinutes   Int           @default(0)
   energyRequired  String        @default("Medium") // High, Medium, Low
   isAIScheduled   Boolean       @default(false)
   type            String        @default("Focus") // Deep Work, Meeting, Learning, Admin, Health, Personal
-  priority        String        @default("Medium") // High, Medium, Low
+  priority        String        @default("Low") // High, Medium, Low
   status          String        @default("Pending") // Pending, InProgress, Completed
   category        String?
   context         String?
   preferredTime   String?
   notes           String?
+  color           String        @default("Red")
   tags            String? // Store as JSON array or comma-separated string
   recurringRule   String? // e.g. "Daily", "Weekly", "Monthly"
   missionScore    Int           @default(50) // Replaces successProb

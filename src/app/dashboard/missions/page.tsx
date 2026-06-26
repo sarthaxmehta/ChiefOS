@@ -53,10 +53,10 @@ export default async function MissionsPage() {
               {/* Meta */}
               <div className="flex items-center gap-4 shrink-0">
                 <div className="text-right hidden md:block">
-                  {mission.deadline && (
+                  {mission.date && (
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       <AlertTriangle className="w-3 h-3 text-yellow-500" />
-                      Due {format(new Date(mission.deadline), "MMM d")}
+                      Due {format(new Date(mission.date), "MMM d")}
                     </div>
                   )}
                   <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">

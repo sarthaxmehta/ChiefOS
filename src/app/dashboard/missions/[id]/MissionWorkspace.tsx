@@ -28,7 +28,7 @@ interface Mission {
   title: string;
   description: string | null;
   context: string | null;
-  deadline: Date | null;
+  date: Date | null;
   estimatedMinutes: number | null;
   energyRequired: string;
   priority: string;
@@ -104,7 +104,7 @@ export function MissionWorkspace({ mission }: { mission: Mission }) {
           {mission.description || mission.context || "No description provided."}
         </p>
         <div className="flex flex-wrap gap-5 text-sm text-muted-foreground pt-1">
-          <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> {formatDate(mission.deadline)}</span>
+          <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> {formatDate(mission.date)}</span>
           <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {mission.estimatedMinutes ?? 60}m estimated</span>
           <span className="flex items-center gap-1.5"><Activity className="w-3.5 h-3.5" /> {mission.energyRequired} energy</span>
         </div>

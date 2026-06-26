@@ -98,32 +98,44 @@ export async function updateTaskStatus(missionId: string, status: string) {
 
 export async function createMission(data: any) {
   try {
+    let startTime: Date | null = null;
+    let endTime: Date | null = null;
+    let dateVal: Date | null = null;
+
+    if (data.scheduledDate) {
+      dateVal = new Date(data.scheduledDate);
+      if (data.startTime) {
+        const startParts = data.startTime.split(":");
+        startTime = new Date(dateVal);
+        startTime.setHours(parseInt(startParts[0], 10), parseInt(startParts[1], 10), 0, 0);
+      }
+      if (data.endTime) {
+        const endParts = data.endTime.split(":");
+        endTime = new Date(dateVal);
+        endTime.setHours(parseInt(endParts[0], 10), parseInt(endParts[1], 10), 0, 0);
+      }
+    }
+
     const mission = await prisma.mission.create({
       data: {
         title: data.title,
         description: data.description,
         type: data.type || "Focus",
-        priority: data.priority || "Medium",
+        priority: data.priority || "Low",
         recurringRule: data.recurringRule,
         category: data.category,
         notes: data.notes,
+        color: data.color || "Red",
+        date: dateVal,
+        startTime: startTime,
+        endTime: endTime,
         tags: data.tags ? JSON.stringify(data.tags) : null,
         status: "Pending",
       }
     });
 
     // Handle Scheduling
-    if (data.scheduledDate && data.startTime && data.endTime) {
-      const sDate = new Date(data.scheduledDate);
-      const startParts = data.startTime.split(":");
-      const endParts = data.endTime.split(":");
-      
-      const startTime = new Date(sDate);
-      startTime.setHours(parseInt(startParts[0], 10), parseInt(startParts[1], 10), 0, 0);
-      
-      const endTime = new Date(sDate);
-      endTime.setHours(parseInt(endParts[0], 10), parseInt(endParts[1], 10), 0, 0);
-
+    if (startTime && endTime) {
       await prisma.scheduledBlock.create({
         data: {
           title: data.title,

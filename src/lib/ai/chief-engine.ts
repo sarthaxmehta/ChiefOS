@@ -3,6 +3,7 @@ import { ActionPlanner } from "./action-planner";
 import { ResponseGenerator } from "./response-generator";
 import { RiskEngine } from "./risk-engine";
 import { MemoryEngine } from "./memory-engine";
+import { getAIModel } from "./model-provider";
 
 export class ChiefEngine {
   /**
@@ -13,12 +14,25 @@ export class ChiefEngine {
   static async processMessage(userMessage: string, history: any[] = []) {
     console.log("[ChiefEngine] Processing message:", userMessage);
     
-    // 1. Intent Engine (Gemini parsing)
-    const intent = await IntentEngine.parseIntent(userMessage, history);
-    console.log("[ChiefEngine] Parsed Intent:", intent);
+    const normalized = userMessage.toLowerCase().trim().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g,"");
+    const simpleGreetings = ["hi", "hello", "hey", "yo", "sup", "gday", "howdy", "how are you", "how is it going", "hows it going", "whats up", "what up"];
+    
+    let actionResult;
 
-    // 2. Action Planner (Deterministic Execution & Data Gathering)
-    const actionResult = await ActionPlanner.executeIntent(intent);
+    if (simpleGreetings.includes(normalized) || normalized === "") {
+      actionResult = {
+        type: 'conversational',
+        reply: "Hello! I'm here to help."
+      };
+      console.log("[ChiefEngine] Fast-pathed simple greeting, bypassing IntentEngine.");
+    } else {
+      // 1. Intent Engine (Gemini parsing)
+      const intent = await IntentEngine.parseIntent(userMessage, history);
+      console.log("[ChiefEngine] Parsed Intent:", intent);
+
+      // 2. Action Planner (Deterministic Execution & Data Gathering)
+      actionResult = await ActionPlanner.executeIntent(intent);
+    }
     console.log("[ChiefEngine] Action Result:", actionResult);
 
     // 3. Gather Context (Risk & Memory)
@@ -31,7 +45,7 @@ export class ChiefEngine {
       memoryData
     };
 
-    const stream = ResponseGenerator.generateStreamingResponse(fullContext, history);
+    const stream = ResponseGenerator.generateStreamingResponse(userMessage, fullContext, history);
     
     return stream;
   }
@@ -74,26 +88,19 @@ export class ChiefEngine {
   static async generateDailyBriefing() {
     const { RiskEngine } = await import("./risk-engine");
     const { MemoryEngine } = await import("./memory-engine");
-    const { generateObject } = await import('ai');
-    const { createGoogleGenerativeAI } = await import('@ai-sdk/google');
-    const { z } = await import('zod');
-
-    const google = createGoogleGenerativeAI({
-      apiKey: process.env.GEMINI_API_KEY,
-    });
+    const { generateText } = await import('ai');
 
     const risk = await RiskEngine.evaluateWorkloadRisk();
     const memory = await MemoryEngine.getProductivityPatterns();
 
-    const { object } = await generateObject({
-      model: google('gemini-2.5-flash'),
-      schema: z.object({ briefing: z.string() }),
+    const { text } = await generateText({
+      model: getAIModel(),
       prompt: `Generate a markdown daily briefing for the ChiefOS user. 
         Risk Level: ${risk.riskLevel}. Pending Tasks: ${risk.totalPendingTasks}. 
         Optimal work time: ${memory.optimalDeepWorkTime}.
         Use professional, executive tone. Include headings for Summary, Priorities, and Risks.`
     });
 
-    return object.briefing;
+    return text;
   }
 }

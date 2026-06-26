@@ -4,7 +4,6 @@ import { Brain, LayoutDashboard, Calendar as CalendarIcon, CheckSquare, Target, 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { GlobalAIPanel } from "@/components/global-ai-panel";
 import { NavigationSidebar } from "@/components/navigation-sidebar";
 import { format } from "date-fns";
 
@@ -46,9 +45,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {children}
         </div>
       </main>
-
-      {/* Right AI Panel */}
-      {pathname !== "/dashboard" && <GlobalAIPanel />}
     </div>
   );
 }

@@ -1,14 +1,52 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { X, Send, BotMessageSquare, User } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
 
 export function DashboardAIPanel({ onClose }: { onClose: () => void }) {
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
-    api: "/api/chief/chat",
-    initialMessages: []
+  const [input, setInput] = useState("");
+  const { messages, sendMessage, status, error, setMessages } = useChat({
+    transport: new DefaultChatTransport({
+      api: "/api/chief/chat"
+    }),
+    messages: []
   });
+
+  // Load chat history on mount
+  useEffect(() => {
+    const saved = localStorage.getItem("chief_chat_history");
+    if (saved) {
+      try {
+        setMessages(JSON.parse(saved));
+      } catch (e) {
+        console.error("Error loading chat history:", e);
+      }
+    }
+  }, [setMessages]);
+
+  // Save chat history on changes
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem("chief_chat_history", JSON.stringify(messages));
+    }
+  }, [messages]);
+
+  const isLoading = status === "submitted" || status === "streaming";
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInput(e.target.value);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+    const textToSend = input;
+    setInput("");
+    sendMessage({ text: textToSend });
+  };
   return (
     <motion.div
       initial={{ opacity: 0, width: 0, y: 150, scale: 0.8 }}
@@ -60,27 +98,36 @@ export function DashboardAIPanel({ onClose }: { onClose: () => void }) {
                 </h3>
               </div>
             ) : (
-              messages.map((m) => (
-                <div 
-                  key={m.id} 
-                  className={`flex items-start gap-2 max-w-[85%] ${m.role === "user" ? "self-end flex-row-reverse" : "self-start"}`}
-                >
-                  {m.role === "assistant" && (
-                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1">
-                      <BotMessageSquare className="w-3.5 h-3.5 text-primary" />
-                    </div>
-                  )}
+              messages.map((m) => {
+                const messageText = m.parts
+                  ? m.parts
+                      .filter((part) => part.type === "text")
+                      .map((part: any) => part.text)
+                      .join("")
+                  : (m as any).content || "";
+
+                return (
                   <div 
-                    className={`rounded-2xl p-3 text-sm border shadow-sm ${
-                      m.role === "user" 
-                        ? "bg-primary text-primary-foreground border-primary rounded-tr-sm" 
-                        : "bg-white/80 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-white/60 dark:border-white/5 rounded-tl-sm"
-                    }`}
+                    key={m.id} 
+                    className={`flex items-start gap-2 max-w-[85%] ${m.role === "user" ? "self-end flex-row-reverse" : "self-start"}`}
                   >
-                    <p className="whitespace-pre-wrap leading-relaxed">{m.content}</p>
+                    {m.role === "assistant" && (
+                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1">
+                        <BotMessageSquare className="w-3.5 h-3.5 text-primary" />
+                      </div>
+                    )}
+                    <div 
+                      className={`rounded-2xl p-3 text-sm border shadow-sm ${
+                        m.role === "user" 
+                          ? "bg-primary text-primary-foreground border-primary rounded-tr-sm" 
+                          : "bg-white/80 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-white/60 dark:border-white/5 rounded-tl-sm"
+                      }`}
+                    >
+                      <p className="whitespace-pre-wrap leading-relaxed">{messageText}</p>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
             
             {isLoading && (
@@ -96,6 +143,18 @@ export function DashboardAIPanel({ onClose }: { onClose: () => void }) {
                    </div>
                  </div>
                </div>
+            )}
+
+            {error && (
+              <div className="self-start flex items-center gap-2 max-w-[85%] mt-auto">
+                <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                  <BotMessageSquare className="w-3.5 h-3.5 text-red-500" />
+                </div>
+                <div className="bg-red-50/90 dark:bg-red-950/20 text-red-700 dark:text-red-400 rounded-2xl rounded-tl-sm p-3 text-xs border border-red-200 dark:border-red-900/30 shadow-sm leading-relaxed">
+                  <p className="font-semibold mb-0.5 text-red-800 dark:text-red-300">Google AI Studio Limit Reached</p>
+                  <p className="opacity-90">Daily Free-tier quota exceeded. Please wait a few minutes, or upgrade to a pay-as-you-go plan on Google AI Studio to increase your limits.</p>
+                </div>
+              </div>
             )}
           </div>
 
