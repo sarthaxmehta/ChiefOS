@@ -67,3 +67,12 @@ npm run dev
 ```
 
 Open [http://localhost:3001](http://localhost:3001) in your browser to inspect the application dashboard.
+
+---
+
+## 📄 License & Restrictions
+
+**All Rights Reserved.** 
+
+This repository and its contents are strictly for review and portfolio presentation purposes (e.g., resume demonstration). Any duplication, distribution, modification, or use of this codebase—specifically for submission in active hackathons, competitive events, or commercial applications—is **strictly prohibited** without express written consent from the owner.
+
