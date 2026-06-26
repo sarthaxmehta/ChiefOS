@@ -18,7 +18,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
         {/* Top Header */}
-        <header className="h-14 border-b border-white/20 dark:border-white/10 flex items-center justify-between px-6 bg-white/20 dark:bg-black/20 backdrop-blur-md shrink-0">
+        <header className={`h-14 flex items-center justify-between px-6 shrink-0 transition-all duration-500 ${
+          pathname === "/dashboard/chief"
+            ? "bg-transparent border-b-0"
+            : "border-b border-white/20 dark:border-white/10 bg-white/20 dark:bg-black/20 backdrop-blur-md"
+        }`}>
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground font-medium">
               {format(now, "EEEE, MMMM do")}

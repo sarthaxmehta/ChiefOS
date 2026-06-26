@@ -59,6 +59,9 @@ const MODELS = [
 export function ChiefClient({ initialUserName }: ChiefClientProps) {
   const [userName] = useState(initialUserName);
   const [greeting, setGreeting] = useState("Good afternoon");
+  const [displayedGreeting, setDisplayedGreeting] = useState("");
+  const [showCursor, setShowCursor] = useState(true);
+  const [resetKey, setResetKey] = useState(0);
   const [inputText, setInputText] = useState("");
   const [selectedModel, setSelectedModel] = useState("Axiom Ultra 3.1");
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
@@ -70,13 +73,34 @@ export function ChiefClient({ initialUserName }: ChiefClientProps) {
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Time-aware Greeting
+  // Time-aware Greeting & Character writing effect
   useEffect(() => {
     const hour = new Date().getHours();
-    if (hour < 12) setGreeting("Good morning");
-    else if (hour < 17) setGreeting("Good afternoon");
-    else setGreeting("Good evening");
-  }, []);
+    let currentGreeting = "Good afternoon";
+    if (hour < 12) currentGreeting = "Good morning";
+    else if (hour < 17) currentGreeting = "Good afternoon";
+    else currentGreeting = "Good evening";
+    
+    setGreeting(currentGreeting);
+
+    const fullText = `${currentGreeting}, ${userName}`;
+    let index = 0;
+    setDisplayedGreeting("");
+    setShowCursor(true);
+    
+    const interval = setInterval(() => {
+      if (index < fullText.length) {
+        setDisplayedGreeting(fullText.substring(0, index + 1));
+        index++;
+      } else {
+        clearInterval(interval);
+        const timeout = setTimeout(() => setShowCursor(false), 2000);
+        return () => clearTimeout(timeout);
+      }
+    }, 45);
+
+    return () => clearInterval(interval);
+  }, [userName, resetKey]);
 
   // Auto-scroll chat history
   useEffect(() => {
@@ -195,6 +219,7 @@ How can I help you customize ChiefOS today?`;
     setMessages([]);
     setInputText("");
     setIsAiTyping(false);
+    setResetKey(prev => prev + 1);
     toast.success("New conversation started!");
   };
 
@@ -215,30 +240,24 @@ How can I help you customize ChiefOS today?`;
         <div className="absolute inset-0 bg-white/40 dark:bg-black/45 backdrop-blur-[4px]" />
       </div>
 
-      {/* Floating Control Panel (Top Edge) */}
-      <header className="relative z-10 w-full px-8 py-3 flex items-center justify-between shrink-0 border-b border-white/20 dark:border-white/5 bg-white/10 dark:bg-black/10 backdrop-blur-md">
-        <div className="flex items-center gap-2">
-          <BrainCircuit className="w-5 h-5 text-amber-500" />
-          <span className="text-xs font-black tracking-widest text-slate-800 dark:text-slate-200 uppercase">Chief Node</span>
-        </div>
-        <div className="flex items-center gap-2">
-          {chatState === "chat" && (
-            <button
-              onClick={handleResetChat}
-              className="flex items-center gap-1.5 bg-white/40 dark:bg-slate-900/60 hover:bg-white/80 dark:hover:bg-slate-900 border border-white/50 dark:border-white/10 rounded-full px-4 py-1.5 text-[10px] font-bold text-slate-700 dark:text-slate-350 transition-all active:scale-95 shadow-sm"
-            >
-              <RefreshCw className="w-3 h-3" /> New Conversation
-            </button>
-          )}
+      {/* Floating Control Panel (Top Right - Borderless) */}
+      <div className="absolute top-4 right-6 z-20 flex items-center gap-2">
+        {chatState === "chat" && (
           <button
-            onClick={() => setIsFullScreen(!isFullScreen)}
-            className="p-2 bg-white/40 dark:bg-slate-900/60 hover:bg-white/80 dark:hover:bg-slate-900 border border-white/50 dark:border-white/10 rounded-full text-slate-700 dark:text-slate-350 transition-all"
-            title={isFullScreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+            onClick={handleResetChat}
+            className="flex items-center gap-1.5 bg-white/70 dark:bg-slate-900/70 hover:bg-white dark:hover:bg-slate-900 border border-slate-200/50 dark:border-white/10 rounded-full px-4 py-2 text-[10px] font-extrabold text-slate-700 dark:text-slate-350 transition-all active:scale-95 shadow-sm backdrop-blur-md"
           >
-            {isFullScreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+            <RefreshCw className="w-3 h-3" /> New Chat
           </button>
-        </div>
-      </header>
+        )}
+        <button
+          onClick={() => setIsFullScreen(!isFullScreen)}
+          className="p-2 bg-white/70 dark:bg-slate-900/70 hover:bg-white dark:hover:bg-slate-900 border border-slate-200/50 dark:border-white/10 rounded-full text-slate-700 dark:text-slate-350 transition-all shadow-sm backdrop-blur-md"
+          title={isFullScreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+        >
+          {isFullScreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+        </button>
+      </div>
 
       {/* Main Adaptive Layout Workspace */}
       <div className="relative z-10 flex-1 w-full max-w-4xl mx-auto flex flex-col justify-center px-6 min-h-0">
@@ -266,8 +285,11 @@ How can I help you customize ChiefOS today?`;
                 </div>
               </motion.div>
 
-              <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight mb-12">
-                {greeting}, {userName}
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-light tracking-tight text-slate-900 dark:text-white mb-12 text-center leading-tight">
+                {displayedGreeting}
+                {showCursor && (
+                  <span className="inline-block w-1.5 h-8 lg:h-10 ml-2 bg-orange-500 animate-pulse align-middle" />
+                )}
               </h1>
 
               {/* Chat Box (Centered) */}
