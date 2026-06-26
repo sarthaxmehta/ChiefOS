@@ -207,3 +207,43 @@ export async function createMission(data: any) {
     throw new Error(error.message || "Database error creating mission");
   }
 }
+
+export async function deleteMission(missionId: string) {
+  try {
+    await prisma.scheduledBlock.deleteMany({
+      where: { missionId }
+    });
+    await prisma.mission.delete({
+      where: { id: missionId }
+    });
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/missions");
+  } catch (error: any) {
+    console.error("Failed to delete mission:", error);
+    throw new Error(error.message || "Database error deleting mission");
+  }
+}
+
+export async function rescheduleMission(missionId: string, dateString: string | null) {
+  try {
+    const dateVal = dateString ? new Date(dateString) : null;
+    if (!dateVal) {
+      await prisma.scheduledBlock.deleteMany({
+        where: { missionId }
+      });
+    }
+    await prisma.mission.update({
+      where: { id: missionId },
+      data: {
+        date: dateVal,
+        startTime: null,
+        endTime: null
+      }
+    });
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/missions");
+  } catch (error: any) {
+    console.error("Failed to reschedule mission:", error);
+    throw new Error(error.message || "Database error rescheduling mission");
+  }
+}
