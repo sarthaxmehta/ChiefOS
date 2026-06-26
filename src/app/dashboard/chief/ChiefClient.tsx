@@ -33,29 +33,6 @@ interface ChiefClientProps {
   initialUserName: string;
 }
 
-const QUICK_STARTS = [
-  {
-    id: "script",
-    title: "Write a script",
-    description: "Write a TypeScript script that fetches data from an API and processes it.",
-    icon: <Code className="w-5 h-5 text-indigo-500" />,
-    prompt: "Write a TypeScript script that fetches data from an API and handles errors."
-  },
-  {
-    id: "document",
-    title: "Analyze document",
-    description: "Analyze this document and provide a comprehensive summary with key insights.",
-    icon: <FileText className="w-5 h-5 text-amber-500" />,
-    prompt: "Analyze this document and provide a comprehensive summary of its core contents."
-  }
-];
-
-const MODELS = [
-  { name: "Axiom Ultra 3.1", description: "Most capable model for complex reasoning" },
-  { name: "Axiom Flash 1.5", description: "Fastest model for lightweight tasks" },
-  { name: "Axiom Code 2.0", description: "Specialized in scriptwriting and debugging" }
-];
-
 export function ChiefClient({ initialUserName }: ChiefClientProps) {
   const [userName] = useState(initialUserName);
   const [greeting, setGreeting] = useState("Good afternoon");
@@ -63,8 +40,6 @@ export function ChiefClient({ initialUserName }: ChiefClientProps) {
   const [showCursor, setShowCursor] = useState(true);
   const [resetKey, setResetKey] = useState(0);
   const [inputText, setInputText] = useState("");
-  const [selectedModel, setSelectedModel] = useState("Axiom Ultra 3.1");
-  const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [chatState, setChatState] = useState<"greeting" | "chat">("greeting");
   const [messages, setMessages] = useState<Message[]>([]);
   const [isAiTyping, setIsAiTyping] = useState(false);
@@ -223,11 +198,6 @@ How can I help you customize ChiefOS today?`;
     toast.success("New conversation started!");
   };
 
-  const selectQuickStart = (prompt: string) => {
-    setInputText(prompt);
-    handleSendMessage(prompt);
-  };
-
   return (
     <div className={`relative w-full h-[calc(100vh-3.5rem)] overflow-hidden select-none bg-[#faf8f5] dark:bg-[#090807] transition-colors duration-700 flex flex-col items-center justify-between ${isFullScreen ? "fixed inset-0 z-50 h-screen w-screen" : ""}`}>
       
@@ -293,43 +263,13 @@ How can I help you customize ChiefOS today?`;
               </h1>
 
               {/* Chat Box (Centered) */}
-              <div className="w-full max-w-2xl mb-8">
+              <div className="w-full max-w-2xl">
                 <ChatInput 
                   value={inputText}
                   onChange={setInputText}
                   onSend={handleSendMessage}
-                  selectedModel={selectedModel}
-                  setSelectedModel={setSelectedModel}
-                  isModelDropdownOpen={isModelDropdownOpen}
-                  setIsModelDropdownOpen={setIsModelDropdownOpen}
                   inputRef={inputRef}
                 />
-              </div>
-
-              {/* Quick Start Actions */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl mt-4">
-                {QUICK_STARTS.map((card, i) => (
-                  <motion.button
-                    key={card.id}
-                    onClick={() => selectQuickStart(card.prompt)}
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 + i * 0.1, duration: 0.4 }}
-                    className="group text-left p-5 rounded-[1.5rem] bg-white/70 dark:bg-slate-900/60 backdrop-blur-lg border border-white/80 dark:border-white/10 hover:border-orange-200/80 dark:hover:border-amber-900/30 hover:bg-white dark:hover:bg-slate-900/90 shadow-[0_4px_20px_-2px_rgba(15,23,42,0.03),inset_0_1px_1px_rgba(255,255,255,0.95)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.05)] hover:shadow-[0_12px_30px_-8px_rgba(249,115,22,0.08)] transition-all duration-300 flex items-start gap-4"
-                  >
-                    <div className="p-2.5 bg-slate-50 dark:bg-slate-950/80 group-hover:bg-orange-50 dark:group-hover:bg-orange-950/20 rounded-xl border border-slate-100 dark:border-white/5 transition-colors shrink-0">
-                      {card.icon}
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="text-xs font-bold text-slate-800 dark:text-slate-100 tracking-tight group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
-                        {card.title}
-                      </h3>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5 leading-normal font-medium">
-                        {card.description}
-                      </p>
-                    </div>
-                  </motion.button>
-                ))}
               </div>
             </motion.div>
           )}
@@ -412,10 +352,6 @@ How can I help you customize ChiefOS today?`;
                   value={inputText}
                   onChange={setInputText}
                   onSend={handleSendMessage}
-                  selectedModel={selectedModel}
-                  setSelectedModel={setSelectedModel}
-                  isModelDropdownOpen={isModelDropdownOpen}
-                  setIsModelDropdownOpen={setIsModelDropdownOpen}
                   inputRef={inputRef}
                 />
               </div>
@@ -440,10 +376,6 @@ interface ChatInputProps {
   value: string;
   onChange: (val: string) => void;
   onSend: (val: string) => void;
-  selectedModel: string;
-  setSelectedModel: (val: string) => void;
-  isModelDropdownOpen: boolean;
-  setIsModelDropdownOpen: (val: boolean) => void;
   inputRef: React.RefObject<HTMLInputElement | null>;
 }
 
@@ -451,10 +383,6 @@ function ChatInput({
   value,
   onChange,
   onSend,
-  selectedModel,
-  setSelectedModel,
-  isModelDropdownOpen,
-  setIsModelDropdownOpen,
   inputRef
 }: ChatInputProps) {
   
@@ -466,104 +394,28 @@ function ChatInput({
   };
 
   return (
-    <div className="w-full relative bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-white/80 dark:border-white/10 rounded-[2rem] shadow-[0_10px_35px_-8px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,0.9)] dark:shadow-[0_10px_35px_-8px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.05)] p-2">
-      
-      {/* TextInput Row */}
-      <div className="flex items-center px-4 py-2">
-        <input
-          ref={inputRef}
-          type="text"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="How can I help you today?"
-          className="flex-grow bg-transparent text-sm text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none pr-4 font-semibold"
-        />
-      </div>
-
-      {/* Button Controls Row */}
-      <div className="flex items-center justify-between border-t border-slate-100 dark:border-white/5 pt-2 px-2 mt-1">
-        <div className="flex items-center gap-1">
-          <button 
-            onClick={() => toast.info("Add integrations coming soon")}
-            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500 dark:text-slate-400 transition-colors"
-            title="Add features"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
-          <button 
-            onClick={() => toast.info("File upload coming soon")}
-            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500 dark:text-slate-400 transition-colors"
-            title="Attach documents"
-          >
-            <Paperclip className="w-4 h-4" />
-          </button>
-          <button 
-            onClick={() => toast.info("Live search coming soon")}
-            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500 dark:text-slate-400 transition-colors"
-            title="Search the web"
-          >
-            <Globe className="w-4 h-4" />
-          </button>
-          <button 
-            onClick={() => toast.info("Voice input coming soon")}
-            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500 dark:text-slate-400 transition-colors"
-            title="Voice message"
-          >
-            <Mic className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* Model Selector Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-[10px] font-extrabold tracking-tight text-slate-600 dark:text-slate-350 transition-colors"
-            >
-              {selectedModel}
-              <ChevronDown className="w-3 h-3 text-slate-400" />
-            </button>
-
-            {isModelDropdownOpen && (
-              <div className="absolute right-0 bottom-full mb-2 w-56 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-xl p-2 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                {MODELS.map((model) => (
-                  <button
-                    key={model.name}
-                    onClick={() => {
-                      setSelectedModel(model.name);
-                      setIsModelDropdownOpen(false);
-                    }}
-                    className={`w-full text-left p-2.5 rounded-xl text-xs transition-colors flex flex-col gap-0.5 ${
-                      selectedModel === model.name 
-                        ? "bg-slate-100 dark:bg-slate-800 font-extrabold text-slate-900 dark:text-white" 
-                        : "hover:bg-slate-50 dark:hover:bg-slate-800/40 text-slate-600 dark:text-slate-400 font-medium"
-                    }`}
-                  >
-                    <span>{model.name}</span>
-                    <span className="text-[9px] text-slate-400 font-medium leading-normal">{model.description}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Send Trigger */}
-          <button
-            onClick={() => onSend(value)}
-            disabled={!value.trim()}
-            className={`p-2 rounded-full transition-all ${
-              value.trim() 
-                ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 hover:scale-105 active:scale-95 cursor-pointer shadow-md" 
-                : "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-600 cursor-not-allowed"
-            }`}
-          >
-            <ArrowUp className="w-4 h-4" />
-          </button>
-        </div>
-
-      </div>
-
+    <div className="w-full relative bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-white/80 dark:border-white/10 rounded-[2rem] shadow-[0_10px_35px_-8px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,0.9)] dark:shadow-[0_10px_35px_-8px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.05)] p-2 flex items-center pr-3">
+      <input
+        ref={inputRef}
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder="How can I help you today?"
+        className="flex-grow bg-transparent text-sm text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none pl-4 pr-3 py-2.5 font-semibold"
+      />
+      {/* Send Trigger */}
+      <button
+        onClick={() => onSend(value)}
+        disabled={!value.trim()}
+        className={`p-2 rounded-full transition-all shrink-0 ${
+          value.trim() 
+            ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 hover:scale-105 active:scale-95 cursor-pointer shadow-md" 
+            : "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-600 cursor-not-allowed"
+        }`}
+      >
+        <ArrowUp className="w-4 h-4" />
+      </button>
     </div>
   );
 }
