@@ -49,12 +49,12 @@ interface MissionsClientProps {
 }
 
 const COLOR_MAP: Record<string, string> = {
-  Red: "border-l-red-500 dark:border-l-red-500/80 shadow-[0_0_15px_rgba(239,68,68,0.04)] hover:shadow-[0_0_20px_rgba(239,68,68,0.08)]",
-  Blue: "border-l-blue-500 dark:border-l-blue-500/80 shadow-[0_0_15px_rgba(59,130,246,0.04)] hover:shadow-[0_0_20px_rgba(59,130,246,0.08)]",
-  Green: "border-l-emerald-500 dark:border-l-emerald-500/80 shadow-[0_0_15px_rgba(16,185,129,0.04)] hover:shadow-[0_0_20px_rgba(16,185,129,0.08)]",
-  Purple: "border-l-purple-500 dark:border-l-purple-500/80 shadow-[0_0_15px_rgba(168,85,247,0.04)] hover:shadow-[0_0_20px_rgba(168,85,247,0.08)]",
-  Yellow: "border-l-amber-500 dark:border-l-amber-500/80 shadow-[0_0_15px_rgba(245,158,11,0.04)] hover:shadow-[0_0_20px_rgba(245,158,11,0.08)]",
-  Orange: "border-l-orange-500 dark:border-l-orange-500/80 shadow-[0_0_15px_rgba(249,115,22,0.04)] hover:shadow-[0_0_20px_rgba(249,115,22,0.08)]",
+  Red: "border-l-red-500 dark:border-l-red-500/80",
+  Blue: "border-l-blue-500 dark:border-l-blue-500/80",
+  Green: "border-l-emerald-500 dark:border-l-emerald-500/80",
+  Purple: "border-l-purple-500 dark:border-l-purple-500/80",
+  Yellow: "border-l-amber-500 dark:border-l-amber-500/80",
+  Orange: "border-l-orange-500 dark:border-l-orange-500/80",
 };
 
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
@@ -289,7 +289,7 @@ function BoardColumn({
   onReschedule
 }: BoardColumnProps) {
   return (
-    <div className="bg-white/10 dark:bg-slate-900/15 backdrop-blur-xl border border-white/30 dark:border-white/5 rounded-[2.5rem] p-5 flex flex-col h-full min-w-[280px] shadow-[0_8px_32px_0_rgba(31,38,135,0.02)]">
+    <div className="bg-slate-100/70 dark:bg-slate-900/40 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 rounded-[2.5rem] p-5 flex flex-col h-full min-w-[280px] shadow-[inset_0_2px_8px_0_rgba(15,23,42,0.04)] dark:shadow-[inset_0_2px_8px_0_rgba(0,0,0,0.4)]">
       {/* Column Header */}
       <div className="flex items-center justify-between mb-5 pb-3 border-b border-slate-200/20 dark:border-white/5 shrink-0">
         <h2 className="font-extrabold text-sm text-slate-800 dark:text-slate-200 tracking-tight">{title}</h2>
@@ -313,7 +313,7 @@ function BoardColumn({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ type: "spring", stiffness: 380, damping: 26 }}
-                className={`group border-l-4 p-4.5 rounded-[1.25rem] border border-white/60 dark:border-white/10 bg-white/45 hover:bg-white/60 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] backdrop-blur-2xl transition-all duration-300 flex flex-col gap-3.5 relative overflow-hidden hover:-translate-y-1 hover:scale-[1.01] ${borderAccent} shadow-[inset_0_1px_1px_rgba(255,255,255,0.45),0_8px_30px_rgba(0,0,0,0.02)] hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.55),0_12px_40px_rgba(0,0,0,0.05)]`}
+                className={`group border-l-4 p-5 rounded-[1.25rem] border border-slate-200 dark:border-slate-800/80 bg-gradient-to-b from-white to-slate-50/95 dark:from-slate-900/95 dark:to-slate-950/95 shadow-[0_6px_16px_-4px_rgba(15,23,42,0.08),0_4px_8px_-2px_rgba(15,23,42,0.04),inset_0_1px_1px_rgba(255,255,255,0.95)] dark:shadow-[0_6px_16px_-4px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.05)] hover:-translate-y-1 hover:scale-[1.01] hover:shadow-[0_20px_35px_-8px_rgba(15,23,42,0.14),0_10px_20px_-5px_rgba(15,23,42,0.06)] dark:hover:shadow-[0_20px_35px_-8px_rgba(0,0,0,0.8),inset_0_1px_1px_rgba(255,255,255,0.08)] transition-all duration-300 flex flex-col gap-3.5 relative overflow-hidden ${borderAccent}`}
               >
                 {/* Header title/checkbox */}
                 <div className="flex items-start gap-3">
@@ -332,7 +332,7 @@ function BoardColumn({
                       {task.title}
                     </h3>
                     {task.description && (
-                      <p className={`text-[10px] mt-1.5 leading-relaxed line-clamp-2 ${isCompleted ? "text-slate-450 dark:text-slate-600" : "text-slate-500"}`}>
+                      <p className={`text-[10px] mt-1.5 leading-relaxed line-clamp-2 ${isCompleted ? "text-slate-400 dark:text-slate-500" : "text-slate-500"}`}>
                         {task.description}
                       </p>
                     )}
@@ -340,7 +340,7 @@ function BoardColumn({
                 </div>
 
                 {/* Footer metadata & category badge */}
-                <div className="flex items-center justify-between border-t border-slate-200/10 pt-2.5 mt-0.5 shrink-0 gap-2">
+                <div className="flex items-center justify-between border-t border-slate-200/60 dark:border-white/10 pt-2.5 mt-0.5 shrink-0 gap-2">
                   <div className="flex flex-wrap items-center gap-1.5 min-w-0">
                     {/* Category Capsule Badge */}
                     {task.category && (
