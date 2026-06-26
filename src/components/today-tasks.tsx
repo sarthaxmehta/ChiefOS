@@ -178,7 +178,9 @@ export function TodayTasks({
                           {task.title}
                         </span>
                         <span className="text-[11px] font-medium text-slate-500 mt-0.5">
-                          {format(new Date(task.startTime), "h:mm a")} - {format(new Date(task.endTime), "h:mm a")}
+                          {task.startTime && task.endTime 
+                            ? `${format(new Date(task.startTime), "h:mm a")} - ${format(new Date(task.endTime), "h:mm a")}`
+                            : "Planned (All Day)"}
                         </span>
                       </div>
                     </div>

@@ -77,14 +77,52 @@ export async function getTasksForDate(dateString: string) {
     include: { mission: true },
     orderBy: { startTime: "asc" }
   });
+
+  const unplannedMissions = await prisma.mission.findMany({
+    where: {
+      date: { gte: start, lt: end },
+      startTime: null,
+      endTime: null
+    }
+  });
+
+  const formattedBlocks = blocks.map(b => ({
+    id: b.id,
+    title: b.title,
+    startTime: b.startTime as Date | null,
+    endTime: b.endTime as Date | null,
+    missionId: b.missionId,
+    mission: b.mission,
+    isUnplanned: false
+  }));
+
+  const formattedUnplanned = unplannedMissions.map(m => ({
+    id: m.id,
+    title: m.title,
+    startTime: null as Date | null,
+    endTime: null as Date | null,
+    missionId: m.id,
+    mission: m,
+    isUnplanned: true
+  }));
   
-  return blocks;
+  return [...formattedBlocks, ...formattedUnplanned];
 }
 
 export async function deleteScheduledTask(blockId: string) {
-  await prisma.scheduledBlock.delete({
+  const block = await prisma.scheduledBlock.findUnique({
     where: { id: blockId }
   });
+  if (block) {
+    await prisma.scheduledBlock.delete({
+      where: { id: blockId }
+    });
+  } else {
+    await prisma.mission.update({
+      where: { id: blockId },
+      data: { date: null }
+    });
+  }
   revalidatePath("/dashboard");
 }
 
