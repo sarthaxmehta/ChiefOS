@@ -20,9 +20,11 @@ export default function TodayView() {
   const [filterMode, setFilterMode] = useState<FilterMode>("date");
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [showTaskDrawer, setShowTaskDrawer] = useState(false);
+  const [taskToEdit, setTaskToEdit] = useState<any>(null);
 
   useHotkeys('meta+n, ctrl+n', (e) => {
     e.preventDefault();
+    setTaskToEdit(null);
     setShowTaskDrawer(true);
   }, { enableOnFormTags: false });
 
@@ -110,7 +112,14 @@ export default function TodayView() {
           <TodayTasks 
             selectedDate={selectedDate} 
             filterMode={filterMode} 
-            onOpenDrawer={() => setShowTaskDrawer(true)} 
+            onOpenDrawer={() => {
+              setTaskToEdit(null);
+              setShowTaskDrawer(true);
+            }} 
+            onEdit={(task) => {
+              setTaskToEdit(task);
+              setShowTaskDrawer(true);
+            }}
           />
         </motion.div>
 
@@ -140,7 +149,12 @@ export default function TodayView() {
 
         <TaskCreationDrawer 
           isOpen={showTaskDrawer} 
-          onClose={() => setShowTaskDrawer(false)} 
+          onClose={() => {
+            setShowTaskDrawer(false);
+            setTaskToEdit(null);
+          }} 
+          initialDate={selectedDate}
+          taskToEdit={taskToEdit}
         />
 
       </div>

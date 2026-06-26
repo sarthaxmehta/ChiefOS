@@ -303,7 +303,8 @@ function BoardColumn({
         <AnimatePresence mode="popLayout">
           {tasks.map((task) => {
             const isCompleted = task.status === "Completed";
-            const borderAccent = COLOR_MAP[task.color || "Red"] || COLOR_MAP.Red;
+            const isCustomColor = task.color && task.color.startsWith("#");
+            const borderAccent = isCustomColor ? "" : (COLOR_MAP[task.color || "Red"] || COLOR_MAP.Red);
             
             return (
               <motion.div
@@ -314,6 +315,7 @@ function BoardColumn({
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ type: "spring", stiffness: 380, damping: 26 }}
                 className={`group border-l-4 p-5 rounded-[1.25rem] border border-slate-200 dark:border-slate-800/80 bg-gradient-to-b from-white to-slate-50/95 dark:from-slate-900/95 dark:to-slate-950/95 shadow-[0_6px_16px_-4px_rgba(15,23,42,0.08),0_4px_8px_-2px_rgba(15,23,42,0.04),inset_0_1px_1px_rgba(255,255,255,0.95)] dark:shadow-[0_6px_16px_-4px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.05)] hover:-translate-y-1 hover:scale-[1.01] hover:shadow-[0_20px_35px_-8px_rgba(15,23,42,0.14),0_10px_20px_-5px_rgba(15,23,42,0.06)] dark:hover:shadow-[0_20px_35px_-8px_rgba(0,0,0,0.8),inset_0_1px_1px_rgba(255,255,255,0.08)] transition-all duration-300 flex flex-col gap-3.5 relative overflow-hidden ${borderAccent}`}
+                style={isCustomColor ? { borderLeftColor: task.color } : {}}
               >
                 {/* Header title/checkbox */}
                 <div className="flex items-start gap-3">

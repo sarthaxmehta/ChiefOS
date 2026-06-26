@@ -47,6 +47,7 @@ export async function getFilteredMissions(mode: "unplanned" | "planned" | "all")
   if (mode === "unplanned") {
     return prisma.mission.findMany({
       where: { scheduledBlocks: { none: {} }, status: { not: "Completed" } },
+      include: { subMissions: true },
       orderBy: { createdAt: "desc" }
     });
   }
@@ -54,13 +55,13 @@ export async function getFilteredMissions(mode: "unplanned" | "planned" | "all")
   if (mode === "planned") {
     return prisma.mission.findMany({
       where: { scheduledBlocks: { some: {} } },
-      include: { scheduledBlocks: true },
+      include: { scheduledBlocks: true, subMissions: true },
       orderBy: { createdAt: "desc" }
     });
   }
 
   return prisma.mission.findMany({
-    include: { scheduledBlocks: true },
+    include: { scheduledBlocks: true, subMissions: true },
     orderBy: { createdAt: "desc" }
   });
 }
@@ -74,7 +75,7 @@ export async function getTasksForDate(dateString: string) {
     where: {
       startTime: { gte: start, lt: end },
     },
-    include: { mission: true },
+    include: { mission: { include: { subMissions: true } } },
     orderBy: { startTime: "asc" }
   });
 
@@ -83,7 +84,8 @@ export async function getTasksForDate(dateString: string) {
       date: { gte: start, lt: end },
       startTime: null,
       endTime: null
-    }
+    },
+    include: { subMissions: true }
   });
 
   const formattedBlocks = blocks.map(b => ({
@@ -245,5 +247,101 @@ export async function rescheduleMission(missionId: string, dateString: string | 
   } catch (error: any) {
     console.error("Failed to reschedule mission:", error);
     throw new Error(error.message || "Database error rescheduling mission");
+  }
+}
+
+export async function updateMission(missionId: string, data: any) {
+  try {
+    let startTime: Date | null = null;
+    let endTime: Date | null = null;
+    let dateVal: Date | null = null;
+
+    if (data.scheduledDate) {
+      dateVal = new Date(data.scheduledDate);
+      if (data.startTime) {
+        const startParts = data.startTime.split(":");
+        startTime = new Date(dateVal);
+        startTime.setHours(parseInt(startParts[0], 10), parseInt(startParts[1], 10), 0, 0);
+      }
+      if (data.endTime) {
+        const endParts = data.endTime.split(":");
+        endTime = new Date(dateVal);
+        endTime.setHours(parseInt(endParts[0], 10), parseInt(endParts[1], 10), 0, 0);
+      }
+    }
+
+    const mission = await prisma.mission.update({
+      where: { id: missionId },
+      data: {
+        title: data.title,
+        description: data.description,
+        type: data.type || "Focus",
+        priority: data.priority || "Low",
+        recurringRule: data.recurringRule,
+        category: data.category,
+        notes: data.notes,
+        color: data.color || "Red",
+        date: dateVal,
+        startTime: startTime,
+        endTime: endTime,
+        tags: data.tags ? JSON.stringify(data.tags) : null,
+      }
+    });
+
+    await prisma.scheduledBlock.deleteMany({
+      where: { missionId: mission.id }
+    });
+
+    if (startTime && endTime) {
+      await prisma.scheduledBlock.create({
+        data: {
+          title: data.title,
+          startTime,
+          endTime,
+          missionId: mission.id,
+          source: "USER"
+        }
+      });
+    }
+
+    await prisma.subMission.deleteMany({
+      where: { missionId: mission.id }
+    });
+
+    if (data.subtasks && Array.isArray(data.subtasks) && data.subtasks.length > 0) {
+      await Promise.all(
+        data.subtasks.map((stTitle: string, idx: number) => 
+          prisma.subMission.create({
+            data: {
+              title: stTitle,
+              missionId: mission.id,
+              order: idx
+            }
+          })
+        )
+      );
+    }
+
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/missions");
+    return mission;
+  } catch (error: any) {
+    console.error("Failed to update mission:", error);
+    throw new Error(error.message || "Database error updating mission");
+  }
+}
+
+export async function toggleSubTaskStatus(subTaskId: string, newStatus: string) {
+  try {
+    const sub = await prisma.subMission.update({
+      where: { id: subTaskId },
+      data: { status: newStatus }
+    });
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/missions");
+    return sub;
+  } catch (error: any) {
+    console.error("Failed to toggle subtask status:", error);
+    throw new Error(error.message || "Database error toggling subtask status");
   }
 }

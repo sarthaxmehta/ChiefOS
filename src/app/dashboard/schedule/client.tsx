@@ -57,6 +57,32 @@ const COLOR_MAP: Record<string, { border: string, bg: string, text: string, indi
   Orange: { border: "border-l-orange-500", bg: "bg-orange-500/10 dark:bg-orange-500/15",text: "text-orange-700 dark:text-orange-300",indicator: "bg-orange-500" }
 };
 
+const getCustomColorStyles = (color: string) => {
+  if (color && color.startsWith("#")) {
+    return {
+      borderClass: "",
+      bgClass: "",
+      textClass: "",
+      indicatorClass: "",
+      borderStyle: { borderLeftColor: color },
+      bgStyle: { backgroundColor: `${color}1A` }, // 10% opacity
+      textStyle: { color: color },
+      indicatorStyle: { backgroundColor: color }
+    };
+  }
+  const c = COLOR_MAP[color || "Red"] || COLOR_MAP.Red;
+  return {
+    borderClass: c.border,
+    bgClass: c.bg,
+    textClass: c.text,
+    indicatorClass: c.indicator,
+    borderStyle: {},
+    bgStyle: {},
+    textStyle: {},
+    indicatorStyle: {}
+  };
+};
+
 const getAvatarsForEvent = (eventId: string, count: number) => {
   const seeds = ["Sarthak", "Jane", "Alex", "John", "Sarah", "Emily", "Bob", "Alice"];
   // Deterministic seed based on string hash
@@ -484,16 +510,19 @@ export function ScheduleClient({ initialEvents, initialUnplannedTasks = [] }: Sc
                       return (
                         <div key={dayIdx} className="flex-grow flex-1 relative h-full border-r border-slate-200 dark:border-white/10 last:border-r-0">
                           {eventsForDay.map(e => {
-                            const c = COLOR_MAP[e.color || "Red"] || COLOR_MAP.Red;
+                            const colorInfo = getCustomColorStyles(e.color || "Red");
                             const avatars = getAvatarsForEvent(e.id, 3);
 
                             return (
                               <div
                                 key={e.id}
-                                className={`absolute rounded-2xl border-l-4 p-3 flex flex-col justify-between transition-all group overflow-hidden ${c.border} ${c.bg} ${c.text} ${e.widthClass} cursor-pointer hover:shadow-lg hover:scale-[1.01]`}
+                                className={`absolute rounded-2xl border-l-4 p-3 flex flex-col justify-between transition-all group overflow-hidden ${colorInfo.borderClass} ${colorInfo.bgClass} ${colorInfo.textClass} ${e.widthClass} cursor-pointer hover:shadow-lg hover:scale-[1.01]`}
                                 style={{ 
                                   top: `${e.top}px`, 
-                                  height: `${e.height}px` 
+                                  height: `${e.height}px`,
+                                  ...colorInfo.borderStyle,
+                                  ...colorInfo.bgStyle,
+                                  ...colorInfo.textStyle
                                 }}
                               >
                                 <div>
@@ -535,16 +564,19 @@ export function ScheduleClient({ initialEvents, initialUnplannedTasks = [] }: Sc
                   ) : (
                     <div className="flex-grow relative h-full">
                       {getPositionedEvents(cDate).map(e => {
-                        const c = COLOR_MAP[e.color || "Red"] || COLOR_MAP.Red;
+                        const colorInfo = getCustomColorStyles(e.color || "Red");
                         const avatars = getAvatarsForEvent(e.id, 4);
 
                         return (
                           <div
                             key={e.id}
-                            className={`absolute rounded-2xl border-l-4 p-4 flex flex-col justify-between transition-all group overflow-hidden ${c.border} ${c.bg} ${c.text} ${e.widthClass} cursor-pointer hover:shadow-xl hover:scale-[1.01]`}
+                            className={`absolute rounded-2xl border-l-4 p-4 flex flex-col justify-between transition-all group overflow-hidden ${colorInfo.borderClass} ${colorInfo.bgClass} ${colorInfo.textClass} ${e.widthClass} cursor-pointer hover:shadow-xl hover:scale-[1.01]`}
                             style={{ 
                               top: `${e.top}px`, 
-                              height: `${e.height}px` 
+                              height: `${e.height}px`,
+                              ...colorInfo.borderStyle,
+                              ...colorInfo.bgStyle,
+                              ...colorInfo.textStyle
                             }}
                           >
                             <div className="space-y-1">
@@ -644,11 +676,16 @@ export function ScheduleClient({ initialEvents, initialUnplannedTasks = [] }: Sc
                       {/* Day Events Badges list */}
                       <div className="flex-1 space-y-1 overflow-hidden flex flex-col justify-end">
                         {combinedItems.slice(0, 3).map(item => {
-                          const c = COLOR_MAP[item.color] || COLOR_MAP.Red;
+                          const colorInfo = getCustomColorStyles(item.color || "Red");
                           return (
                             <div 
                               key={item.id} 
-                              className={`text-[9px] font-extrabold truncate rounded-md px-1.5 py-0.5 border-l-2 leading-tight ${c.border} ${c.bg} ${c.text} ${item.isCompleted ? "line-through opacity-50" : ""}`}
+                              className={`text-[9px] font-extrabold truncate rounded-md px-1.5 py-0.5 border-l-2 leading-tight ${colorInfo.borderClass} ${colorInfo.bgClass} ${colorInfo.textClass} ${item.isCompleted ? "line-through opacity-50" : ""}`}
+                              style={{
+                                ...colorInfo.borderStyle,
+                                ...colorInfo.bgStyle,
+                                ...colorInfo.textStyle
+                              }}
                             >
                               {item.title}
                             </div>
@@ -821,7 +858,7 @@ function UnplannedTaskPill({ task }: { task: UnplannedTaskItem }) {
     }
   };
 
-  const c = COLOR_MAP[task.color || "Red"] || COLOR_MAP.Red;
+  const colorInfo = getCustomColorStyles(task.color || "Red");
 
   return (
     <div 
@@ -829,14 +866,22 @@ function UnplannedTaskPill({ task }: { task: UnplannedTaskItem }) {
       className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-[10px] font-extrabold cursor-pointer transition-all hover:scale-[1.02] shadow-sm select-none truncate ${
         completed 
           ? "bg-slate-100/50 dark:bg-slate-800/40 border-slate-200/60 dark:border-white/5 text-slate-400 dark:text-slate-500 line-through" 
-          : `${c.bg} ${c.border} ${c.text}`
+          : `${colorInfo.bgClass} ${colorInfo.borderClass} ${colorInfo.textClass}`
       }`}
+      style={completed ? {} : {
+        ...colorInfo.bgStyle,
+        ...colorInfo.borderStyle,
+        ...colorInfo.textStyle
+      }}
     >
       <div className="shrink-0 flex items-center justify-center">
         {completed ? (
           <CheckCircle2 className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 fill-current" />
         ) : (
-          <Circle className="w-3.5 h-3.5 opacity-60" />
+          <Circle 
+            className="w-3.5 h-3.5 opacity-60" 
+            style={task.color.startsWith("#") ? { color: task.color } : {}}
+          />
         )}
       </div>
       <span className="truncate">{task.title}</span>

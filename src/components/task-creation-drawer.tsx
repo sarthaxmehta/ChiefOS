@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, CheckCircle2, Circle, Search, Clock, Calendar as CalendarIcon, Tag, Zap, Activity, Layers, Play } from "lucide-react";
+import { X, CheckCircle2, Circle, Search, Clock, Calendar as CalendarIcon, Tag, Zap, Activity, Layers, Play, Check } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { createMission } from "@/app/dashboard/actions";
+import { createMission, updateMission } from "@/app/dashboard/actions";
 import { useHotkeys } from "react-hotkeys-hook";
 
 const COLORS = [
@@ -17,12 +17,16 @@ const COLORS = [
   { name: "Orange", value: "Orange", class: "bg-orange-500 hover:bg-orange-600 ring-orange-500" }
 ];
 
+import { useEffect } from "react";
+
 interface TaskCreationDrawerProps {
   isOpen: boolean;
   onClose: () => void;
+  initialDate?: Date;
+  taskToEdit?: any;
 }
 
-export function TaskCreationDrawer({ isOpen, onClose }: TaskCreationDrawerProps) {
+export function TaskCreationDrawer({ isOpen, onClose, initialDate, taskToEdit }: TaskCreationDrawerProps) {
   // Section 1: Basic Info
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -35,9 +39,12 @@ export function TaskCreationDrawer({ isOpen, onClose }: TaskCreationDrawerProps)
 
   // Section 3.5: Color Label
   const [color, setColor] = useState("Red");
+  const [customColor, setCustomColor] = useState("#ea580c");
 
   // Section 4: Frequency (Only for Recurring/Habit)
   const [recurringRule, setRecurringRule] = useState("Daily");
+  const [customRepeatValue, setCustomRepeatValue] = useState(1);
+  const [customRepeatUnit, setCustomRepeatUnit] = useState("weeks");
 
   // Section 5: Scheduling
   const [schedulingMode, setSchedulingMode] = useState("Unplanned");
@@ -47,9 +54,10 @@ export function TaskCreationDrawer({ isOpen, onClose }: TaskCreationDrawerProps)
 
   // Section 6: Category
   const [category, setCategory] = useState("Work");
+  const [customCategory, setCustomCategory] = useState("");
 
   // Section 8: Subtasks
-  const [subtasks, setSubtasks] = useState<{ id: number, title: string }[]>([]);
+  const [subtasks, setSubtasks] = useState<{ id: string | number, title: string }[]>([]);
   const [subtaskInput, setSubtaskInput] = useState("");
 
   // Section 9: Tags
@@ -58,6 +66,113 @@ export function TaskCreationDrawer({ isOpen, onClose }: TaskCreationDrawerProps)
 
   // Section 10: Notes
   const [notes, setNotes] = useState("");
+
+  useEffect(() => {
+    if (isOpen) {
+      if (taskToEdit) {
+        setTitle(taskToEdit.title || "");
+        setDescription(taskToEdit.description || "");
+        setType(taskToEdit.type || "One Time");
+        setPriority(taskToEdit.priority || "Low");
+        
+        // Custom Category logic
+        const presetCategories = ["Study", "Work", "Health", "Personal", "Finance", "Payment"];
+        if (taskToEdit.category && !presetCategories.includes(taskToEdit.category)) {
+          setCategory("Custom");
+          setCustomCategory(taskToEdit.category);
+        } else {
+          setCategory(taskToEdit.category || "Work");
+          setCustomCategory("");
+        }
+        
+        // Color
+        if (taskToEdit.color && taskToEdit.color.startsWith("#")) {
+          setColor(taskToEdit.color);
+          setCustomColor(taskToEdit.color);
+        } else {
+          setColor(taskToEdit.color || "Red");
+          setCustomColor("#ea580c");
+        }
+        
+        // Recurring rule logic
+        const presetRules = ["Daily", "Weekly", "Monthly"];
+        if (taskToEdit.recurringRule) {
+          if (!presetRules.includes(taskToEdit.recurringRule)) {
+            setRecurringRule("Custom");
+            const match = taskToEdit.recurringRule.match(/Repeat every (\d+) (\w+)/);
+            if (match) {
+              setCustomRepeatValue(parseInt(match[1], 10));
+              setCustomRepeatUnit(match[2]);
+            } else {
+              setCustomRepeatValue(1);
+              setCustomRepeatUnit("weeks");
+            }
+          } else {
+            setRecurringRule(taskToEdit.recurringRule);
+          }
+        } else {
+          setRecurringRule("Daily");
+        }
+
+        // Date and time scheduling
+        if (taskToEdit.date || taskToEdit.startTime) {
+          setSchedulingMode("Schedule Now");
+          setScheduledDate(taskToEdit.date ? format(new Date(taskToEdit.date), "yyyy-MM-dd") : "");
+          setStartTime(taskToEdit.startTime ? format(new Date(taskToEdit.startTime), "HH:mm") : "");
+          setEndTime(taskToEdit.endTime ? format(new Date(taskToEdit.endTime), "HH:mm") : "");
+        } else {
+          setSchedulingMode("Unplanned");
+          setScheduledDate(initialDate ? format(initialDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"));
+          setStartTime("");
+          setEndTime("");
+        }
+
+        // Subtasks
+        if (taskToEdit.subMissions) {
+          setSubtasks(taskToEdit.subMissions.map((sm: any) => ({ id: sm.id, title: sm.title })));
+        } else {
+          setSubtasks([]);
+        }
+
+        // Tags
+        if (taskToEdit.tags) {
+          try {
+            setTags(JSON.parse(taskToEdit.tags));
+          } catch (e) {
+            setTags(taskToEdit.tags.split(",").map((t: string) => t.trim()));
+          }
+        } else {
+          setTags([]);
+        }
+
+        // Notes
+        setNotes(taskToEdit.notes || "");
+      } else {
+        // Reset/New Task Mode
+        setTitle("");
+        setDescription("");
+        setType("One Time");
+        setPriority("Low");
+        setCategory("Work");
+        setCustomCategory("");
+        setColor("Red");
+        setCustomColor("#ea580c");
+        setRecurringRule("Daily");
+        setCustomRepeatValue(1);
+        setCustomRepeatUnit("weeks");
+        
+        const dateToUse = initialDate || new Date();
+        setScheduledDate(format(dateToUse, "yyyy-MM-dd"));
+        setSchedulingMode(initialDate ? "Schedule Now" : "Unplanned");
+        setStartTime("");
+        setEndTime("");
+        
+        setSubtasks([]);
+        setTags([]);
+        setNotes("");
+      }
+    }
+  }, [isOpen, taskToEdit, initialDate]);
 
   const handleAddTag = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && tagInput.trim()) {
@@ -81,7 +196,7 @@ export function TaskCreationDrawer({ isOpen, onClose }: TaskCreationDrawerProps)
     }
   };
 
-  const handleRemoveSubtask = (idToRemove: number) => {
+  const handleRemoveSubtask = (idToRemove: string | number) => {
     setSubtasks(subtasks.filter(s => s.id !== idToRemove));
   };
 
@@ -101,23 +216,41 @@ export function TaskCreationDrawer({ isOpen, onClose }: TaskCreationDrawerProps)
       return;
     }
 
+    const finalCategory = category === "Custom" ? (customCategory.trim() || "Custom") : category;
+    
+    let finalRecurringRule = null;
+    if (type === "Recurring" || type === "Habit") {
+      if (recurringRule === "Custom") {
+        finalRecurringRule = `Repeat every ${customRepeatValue} ${customRepeatUnit}`;
+      } else {
+        finalRecurringRule = recurringRule;
+      }
+    }
+
+    const taskData = {
+      title,
+      description,
+      type,
+      priority,
+      recurringRule: finalRecurringRule,
+      scheduledDate: (scheduleNow || schedulingMode === "Schedule Now") && scheduledDate ? scheduledDate : null,
+      startTime: (scheduleNow || schedulingMode === "Schedule Now") && startTime ? startTime : null,
+      endTime: (scheduleNow || schedulingMode === "Schedule Now") && endTime ? endTime : null,
+      category: finalCategory,
+      color,
+      subtasks: subtasks.map(s => s.title),
+      tags,
+      notes
+    };
+
     try {
-      await createMission({
-        title,
-        description,
-        type,
-        priority,
-        recurringRule: (type === "Recurring" || type === "Habit") ? recurringRule : null,
-        scheduledDate: scheduleNow && scheduledDate ? scheduledDate : null,
-        startTime: scheduleNow && startTime ? startTime : null,
-        endTime: scheduleNow && endTime ? endTime : null,
-        category,
-        color,
-        subtasks: subtasks.map(s => s.title),
-        tags,
-        notes
-      });
-      toast.success(scheduleNow ? "Task created and scheduled!" : "Task created successfully!");
+      if (taskToEdit) {
+        await updateMission(taskToEdit.id, taskData);
+        toast.success("Task updated successfully!");
+      } else {
+        await createMission(taskData);
+        toast.success(scheduleNow ? "Task created and scheduled!" : "Task created successfully!");
+      }
       window.dispatchEvent(new Event("task-updated"));
       onClose();
       // Reset form
@@ -127,8 +260,9 @@ export function TaskCreationDrawer({ isOpen, onClose }: TaskCreationDrawerProps)
       setTags([]);
       setNotes("");
       setColor("Red");
+      setCustomColor("#ea580c");
     } catch (error: any) {
-      toast.error(error.message || "Failed to create task");
+      toast.error(error.message || "Failed to save task");
     }
   };
 
@@ -158,7 +292,7 @@ export function TaskCreationDrawer({ isOpen, onClose }: TaskCreationDrawerProps)
           <div className="h-16 border-b border-slate-200 dark:border-white/10 flex items-center justify-between px-8 shrink-0">
             <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
               <span className="bg-primary/20 text-primary p-1.5 rounded-md"><Play className="w-4 h-4" /></span>
-              New Task
+              {taskToEdit ? "Edit Task" : "New Task"}
             </h2>
             <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-full transition-colors text-slate-500">
               <X className="w-5 h-5" />
@@ -244,6 +378,36 @@ export function TaskCreationDrawer({ isOpen, onClose }: TaskCreationDrawerProps)
                         </button>
                       ))}
                     </div>
+
+                    {recurringRule === "Custom" && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: -10 }} 
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex gap-4 items-end bg-slate-50 dark:bg-slate-900/30 p-4 rounded-xl border border-slate-200 dark:border-white/5 w-fit"
+                      >
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-slate-500">Repeat every</label>
+                          <input 
+                            type="number" 
+                            min="1" 
+                            value={customRepeatValue} 
+                            onChange={e => setCustomRepeatValue(Math.max(1, parseInt(e.target.value) || 1))} 
+                            className="w-20 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary text-center"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <select 
+                            value={customRepeatUnit} 
+                            onChange={e => setCustomRepeatUnit(e.target.value)} 
+                            className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary"
+                          >
+                            <option value="days">days</option>
+                            <option value="weeks">weeks</option>
+                            <option value="months">months</option>
+                          </select>
+                        </div>
+                      </motion.div>
+                    )}
                   </motion.section>
                 )}
               </AnimatePresence>
@@ -288,6 +452,22 @@ export function TaskCreationDrawer({ isOpen, onClose }: TaskCreationDrawerProps)
                     </button>
                   ))}
                 </div>
+
+                {category === "Custom" && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10 }} 
+                    animate={{ opacity: 1, y: 0 }}
+                    className="pt-2"
+                  >
+                    <input 
+                      type="text" 
+                      placeholder="Enter custom category..." 
+                      value={customCategory} 
+                      onChange={e => setCustomCategory(e.target.value)} 
+                      className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-primary w-full max-w-md"
+                    />
+                  </motion.div>
+                )}
               </section>
 
               {/* Sec 6.5: Label Color */}
@@ -307,6 +487,28 @@ export function TaskCreationDrawer({ isOpen, onClose }: TaskCreationDrawerProps)
                       }`}
                     />
                   ))}
+                  
+                  {/* Custom color picker */}
+                  <div className="relative">
+                    <input 
+                      type="color" 
+                      value={customColor} 
+                      onChange={(e) => {
+                        setCustomColor(e.target.value);
+                        setColor(e.target.value);
+                      }} 
+                      className="absolute inset-0 opacity-0 w-8 h-8 cursor-pointer rounded-full"
+                    />
+                    <div 
+                      className={`w-8 h-8 rounded-full border border-slate-200/80 dark:border-white/10 flex items-center justify-center bg-gradient-to-tr from-red-500 via-green-500 to-blue-500 transition-all cursor-pointer ${
+                        color.startsWith("#") ? "ring-2 ring-offset-2 ring-offset-background scale-110" : "opacity-75 hover:opacity-100"
+                      }`}
+                      style={color.startsWith("#") ? { backgroundColor: color, backgroundImage: "none" } : {}}
+                      title="Custom Color"
+                    >
+                      {color.startsWith("#") && <Check className="w-4 h-4 text-white mix-blend-difference" />}
+                    </div>
+                  </div>
                 </div>
               </section>
 
@@ -367,14 +569,17 @@ export function TaskCreationDrawer({ isOpen, onClose }: TaskCreationDrawerProps)
             <div className="w-[380px] bg-slate-50 dark:bg-slate-900/20 border-l border-slate-200 dark:border-white/10 p-8 flex flex-col items-center">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-8 w-full text-center">Live Preview</h3>
               
-              <div className={`w-full bg-white dark:bg-[#111] rounded-2xl shadow-xl shadow-black/5 border border-slate-200 dark:border-white/10 p-6 flex flex-col gap-4 sticky top-8 hover:scale-[1.02] transition-transform border-l-4 ${
-                color === "Red" ? "border-l-red-500" :
-                color === "Blue" ? "border-l-blue-500" :
-                color === "Green" ? "border-l-green-500" :
-                color === "Purple" ? "border-l-purple-500" :
-                color === "Yellow" ? "border-l-yellow-500" :
-                color === "Orange" ? "border-l-orange-500" : "border-l-primary"
-              }`}>
+              <div 
+                className={`w-full bg-white dark:bg-[#111] rounded-2xl shadow-xl shadow-black/5 border border-slate-200 dark:border-white/10 p-6 flex flex-col gap-4 sticky top-8 hover:scale-[1.02] transition-transform border-l-4 ${
+                  color === "Red" ? "border-l-red-500" :
+                  color === "Blue" ? "border-l-blue-500" :
+                  color === "Green" ? "border-l-green-500" :
+                  color === "Purple" ? "border-l-purple-500" :
+                  color === "Yellow" ? "border-l-yellow-500" :
+                  color === "Orange" ? "border-l-orange-500" : "border-l-primary"
+                }`}
+                style={color.startsWith("#") ? { borderLeftColor: color } : {}}
+              >
                 <div className="flex justify-between items-start gap-4">
                   <h4 className="font-bold text-xl text-slate-800 dark:text-slate-100 tracking-tight leading-tight">
                     {title || "Untitled Task"}
@@ -388,13 +593,16 @@ export function TaskCreationDrawer({ isOpen, onClose }: TaskCreationDrawerProps)
                   <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md flex items-center gap-1">
                     <Layers className="w-3 h-3 text-primary" /> {type}
                   </span>
+                  <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md flex items-center gap-1">
+                    <Tag className="w-3 h-3 text-emerald-500" /> {category === "Custom" ? (customCategory || "Custom") : category}
+                  </span>
                   {(type === "Recurring" || type === "Habit") && (
                     <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-indigo-500" /> {recurringRule}
+                      <Clock className="w-3 h-3 text-indigo-500" /> {recurringRule === "Custom" ? `Every ${customRepeatValue} ${customRepeatUnit}` : recurringRule}
                     </span>
                   )}
                   <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md flex items-center gap-1">
-                    <CalendarIcon className="w-3 h-3" /> {schedulingMode === "Schedule Now" && scheduledDate ? format(new Date(scheduledDate), "MMM do") : "Unscheduled"}
+                    <CalendarIcon className="w-3 h-3" /> {(schedulingMode === "Schedule Now" || (taskToEdit && schedulingMode === "Schedule Now")) && scheduledDate ? format(new Date(scheduledDate), "MMM do") : "Unscheduled"}
                   </span>
                 </div>
 
@@ -423,18 +631,29 @@ export function TaskCreationDrawer({ isOpen, onClose }: TaskCreationDrawerProps)
               Cancel
             </button>
             <div className="flex items-center gap-3">
-              <button 
-                onClick={() => handleSave(false)} 
-                className="px-6 py-2.5 text-sm font-semibold bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-              >
-                Save Task
-              </button>
-              <button 
-                onClick={() => handleSave(true)}
-                className="px-6 py-2.5 text-sm font-semibold bg-primary text-white rounded-xl hover:opacity-90 transition-opacity shadow-md shadow-primary/20"
-              >
-                Save & Schedule
-              </button>
+              {taskToEdit ? (
+                <button 
+                  onClick={() => handleSave(false)} 
+                  className="px-6 py-2.5 text-sm font-semibold bg-primary text-white rounded-xl hover:opacity-90 transition-opacity shadow-md shadow-primary/20"
+                >
+                  Update Task
+                </button>
+              ) : (
+                <>
+                  <button 
+                    onClick={() => handleSave(false)} 
+                    className="px-6 py-2.5 text-sm font-semibold bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    Save Task
+                  </button>
+                  <button 
+                    onClick={() => handleSave(true)}
+                    className="px-6 py-2.5 text-sm font-semibold bg-primary text-white rounded-xl hover:opacity-90 transition-opacity shadow-md shadow-primary/20"
+                  >
+                    Save & Schedule
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
