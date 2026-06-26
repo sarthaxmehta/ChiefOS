@@ -135,24 +135,37 @@
   }
 }
 
-/* Base gradients and styles for the new aesthetic */
+/* Base gradients and styles for the new aesthetic with water-like flowing animation */
+@keyframes mesh-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
 .mesh-bg {
   background-color: var(--background);
   background-image: 
-    radial-gradient(at 0% 0%, oklch(0.9 0.05 150 / 0.3) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, oklch(0.9 0.05 280 / 0.3) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, oklch(0.9 0.05 310 / 0.3) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, oklch(0.9 0.05 80 / 0.3) 0px, transparent 50%);
-  background-size: 100% 100%;
+    radial-gradient(at 0% 10%, oklch(0.7 0.15 280 / 0.2) 0px, transparent 60%),
+    radial-gradient(at 90% 10%, oklch(0.75 0.15 320 / 0.2) 0px, transparent 60%),
+    radial-gradient(at 100% 90%, oklch(0.85 0.12 160 / 0.15) 0px, transparent 60%),
+    radial-gradient(at 10% 90%, oklch(0.85 0.1 80 / 0.1) 0px, transparent 60%);
+  background-size: 240% 240%;
   background-attachment: fixed;
+  animation: mesh-flow 25s ease-in-out infinite;
 }
 
 .dark .mesh-bg {
   background-image: 
-    radial-gradient(at 0% 0%, oklch(0.15 0.05 150 / 0.2) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, oklch(0.15 0.05 280 / 0.2) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, oklch(0.15 0.05 310 / 0.2) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, oklch(0.15 0.05 80 / 0.2) 0px, transparent 50%);
+    radial-gradient(at 0% 10%, oklch(0.18 0.08 280 / 0.25) 0px, transparent 60%),
+    radial-gradient(at 90% 10%, oklch(0.18 0.1 320 / 0.25) 0px, transparent 60%),
+    radial-gradient(at 100% 90%, oklch(0.18 0.08 160 / 0.2) 0px, transparent 60%),
+    radial-gradient(at 10% 90%, oklch(0.15 0.05 240 / 0.2) 0px, transparent 60%);
 }
 
 .pastel-card {
