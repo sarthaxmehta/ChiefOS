@@ -42,6 +42,7 @@ const MODEL_CHAINS: Record<AITask, ModelConfig[]> = {
   intent_parsing: [
     { provider: 'groq',   modelId: 'llama-3.3-70b-versatile',  label: 'Groq Llama 3.3 70B' },
     { provider: 'google', modelId: 'gemini-2.5-flash-lite',     label: 'Gemini 2.5 Flash Lite' },
+    { provider: 'google', modelId: 'gemini-2.5-flash',          label: 'Gemini 2.5 Flash' },
   ],
   response_streaming: [
     { provider: 'groq',   modelId: 'llama-3.3-70b-versatile',  label: 'Groq Llama 3.3 70B' },
