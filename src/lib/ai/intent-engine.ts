@@ -20,10 +20,11 @@ export const IntentSchema = z.object({
     title: z.string().optional(),
     durationMinutes: z.number().optional(),
     targetDateIso: z.string().optional().describe("The target date in ISO format (YYYY-MM-DD), resolved from relative terms like 'today' or 'tomorrow' using the current date."),
+    startTimeString: z.string().optional().describe("Specific start time of the task in 24-hour format (e.g., '14:00', '09:30', '18:00'), extracted from relative times like 'from 2 to 3' (14:00) or 'at 5 PM' (17:00)."),
     category: z.string().optional(),
     topic: z.string().optional(),
   }).optional(),
-  conversationalReply: z.string().optional().describe("If the user is just saying hello or asking a general question, the AI can provide a quick reply here."),
+  conversationalReply: z.string().optional().describe("If the user is just saying hello, asking a general question, or confirming a previous action (like 'yes', 'sure', 'lock it in'), the AI can provide a quick reply here."),
 });
 
 export type ParsedIntent = z.infer<typeof IntentSchema>;
@@ -43,12 +44,15 @@ export class IntentEngine {
           schema: IntentSchema,
           system: `You are the Intent Engine for ChiefOS, a deterministic productivity system.
             Your ONLY job is to classify the user's message into an executable intent.
-            Extract any relevant data (durations, titles, dates).
+            Extract any relevant data (durations, titles, dates, specific start times).
             
             REFERENCE DATE AND TIME context for this request: ${refDate.toString()} (ISO: ${refDate.toISOString()})
             Use this reference date to resolve relative date terms like "today", "tomorrow", "yesterday", "next Monday", etc.
             
-            If the user is making casual conversation, use intent="conversational" and provide a conversationalReply.`,
+            CRITICAL RULES:
+            1. If the user is responding with a confirmation (like "yes", "sure", "ok", "lock it in", "confirm") to a previous message, classify the intent as "conversational" and output a warm confirmation reply in conversationalReply. Do NOT classify it as "create_task" or "reschedule_tasks" because those tasks have already been processed in the history.
+            2. If the user specifies a particular time window or hour (e.g., "from 2 to 3 today", "at 5pm", "between 9 and 10"), extract the start hour as startTimeString (e.g., "14:00", "17:00", "09:00") and calculate the durationMinutes accordingly (e.g., "from 2 to 3" is 60 minutes).
+            3. If the user is making casual conversation, use intent="conversational" and provide a conversationalReply.`,
           messages: [
             ...history,
             { role: 'user' as const, content: userMessage }

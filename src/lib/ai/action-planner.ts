@@ -60,13 +60,33 @@ export class ActionPlanner {
       }
     });
 
-    // 2. If duration or auto-scheduling parameters are matched, auto-schedule it
+    // 2. Schedule the block: exact time (if provided) or find available slots
     let schedulingOptions: any[] = [];
     let scheduledBlock = null;
-    if (data.durationMinutes) {
-      schedulingOptions = await SchedulingEngine.findAvailableSlots(data.durationMinutes, targetDate);
-      
+
+    const duration = data.durationMinutes || 60;
+
+    if (data.startTimeString) {
+      // Parse the exact requested start time
+      const startTime = new Date(targetDate);
+      const [hours, minutes] = data.startTimeString.split(':').map(Number);
+      startTime.setHours(hours, minutes, 0, 0);
+      const endTime = new Date(startTime.getTime() + duration * 60000);
+
+      scheduledBlock = await prisma.scheduledBlock.create({
+        data: {
+          title: data.title,
+          startTime: startTime,
+          endTime: endTime,
+          source: "AI",
+          type: "Focus",
+          missionId: mission.id
+        }
+      });
+      schedulingOptions = [{ start: startTime, end: endTime }];
+    } else {
       // Auto-schedule in the first available slot
+      schedulingOptions = await SchedulingEngine.findAvailableSlots(duration, targetDate);
       if (schedulingOptions.length > 0) {
         scheduledBlock = await prisma.scheduledBlock.create({
           data: {
