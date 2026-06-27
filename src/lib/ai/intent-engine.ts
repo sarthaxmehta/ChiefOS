@@ -18,10 +18,13 @@ export const IntentSchema = z.object({
   ]),
   extractedData: z.object({
     title: z.string().optional(),
+    description: z.string().optional().describe("Any additional details, notes, or descriptions of the task."),
     durationMinutes: z.number().optional(),
     targetDateIso: z.string().optional().describe("The target date in ISO format (YYYY-MM-DD), resolved from relative terms like 'today' or 'tomorrow' using the current date."),
     startTimeString: z.string().optional().describe("Specific start time of the task in 24-hour format (e.g., '14:00', '16:00', '09:30', '18:00'), extracted from relative times like 'from 4 to 5' (16:00), 'at 4' (16:00), 'from 2 to 3' (14:00), or 'at 5 PM' (17:00)."),
-    category: z.string().optional(),
+    category: z.string().optional().describe("Task category (e.g., 'Work', 'Personal', 'Health', 'General', 'Study')."),
+    priority: z.enum(['Low', 'Medium', 'High']).optional().describe("Task priority level."),
+    recurringRule: z.string().optional().describe("Recurrence rule (e.g. 'Daily', 'Weekly', 'Monthly', 'One-time') if the user asks for a recurring task (e.g. 'weekly bill payment' -> 'Weekly', 'daily checkin' -> 'Daily')."),
     topic: z.string().optional(),
   }).optional(),
   conversationalReply: z.string().optional().describe("If the user is just saying hello, asking a general question, or confirming a previous action (like 'yes', 'sure', 'lock it in'), the AI can provide a quick reply here."),
@@ -53,7 +56,8 @@ export class IntentEngine {
             1. If the user is responding with a confirmation (like "yes", "sure", "ok", "lock it in", "confirm") to a previous message, classify the intent as "conversational" and output a warm confirmation reply in conversationalReply. Do NOT classify it as "create_task" or "reschedule_tasks" because those tasks have already been processed in the history.
             2. If the user specifies a particular time window or hour (e.g., "from 4 to 5 today", "at 4", "4-5", "between 2 and 3"), extract the start hour as startTimeString (e.g., "16:00", "14:00") and calculate the durationMinutes accordingly (e.g., "from 4 to 5" is 60 minutes).
             3. If time numbers are specified without AM/PM (e.g., "from 4 to 5", "at 4"), assume PM hours (afternoon/evening, i.e., 4 -> "16:00", 2 -> "14:00") by default unless "AM" or "morning" is explicitly specified.
-            4. If the user is making casual conversation, use intent="conversational" and provide a conversationalReply.`,
+            4. If the user specifies that a task is recurring (e.g. "weekly bill payment", "daily gym session", "every Monday reading"), extract recurringRule as "Daily", "Weekly", "Monthly", or "Custom" depending on the frequency.
+            5. If the user is making casual conversation, use intent="conversational" and provide a conversationalReply.`,
           messages: [
             ...history,
             { role: 'user' as const, content: userMessage }

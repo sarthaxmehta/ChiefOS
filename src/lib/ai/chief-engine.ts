@@ -38,7 +38,7 @@ export class ChiefEngine {
       console.log("[ChiefEngine] Parsed Intent:", intent);
 
       // 2. Action Planner (Deterministic Execution & Data Gathering)
-      actionResult = await ActionPlanner.executeIntent(intent, selectedDateIso);
+      actionResult = await ActionPlanner.executeIntent(intent, selectedDateIso, userMessage);
     }
     console.log("[ChiefEngine] Action Result:", actionResult);
 

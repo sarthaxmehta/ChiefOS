@@ -8,12 +8,12 @@ export class ActionPlanner {
    * Translates the structured Intent into a deterministic execution plan
    * and executes the required engines.
    */
-  static async executeIntent(intentData: ParsedIntent, referenceDateIso?: string) {
+  static async executeIntent(intentData: ParsedIntent, referenceDateIso?: string, userMessage?: string) {
     const { intent, extractedData } = intentData;
 
     switch (intent) {
       case 'create_task':
-        return await this.handleCreateTask(extractedData, referenceDateIso);
+        return await this.handleCreateTask(extractedData, referenceDateIso, userMessage);
       
       case 'task_decomposition':
         return await this.handleTaskDecomposition(extractedData);
@@ -39,7 +39,7 @@ export class ActionPlanner {
     }
   }
 
-  private static async handleCreateTask(data: any, referenceDateIso?: string) {
+  private static async handleCreateTask(data: any, referenceDateIso?: string, userMessage?: string) {
     if (!data || !data.title) {
       return { type: 'error', message: "I need a task title to create a task." };
     }
@@ -49,14 +49,29 @@ export class ActionPlanner {
       ? new Date(data.targetDateIso) 
       : (referenceDateIso ? new Date(referenceDateIso) : new Date());
 
+    // Deterministic backup: infer recurring rule from either the title or raw request if the AI parser missed it
+    let recurringRule = data.recurringRule || null;
+    if (!recurringRule) {
+      const searchStr = `${data.title || ""} ${userMessage || ""}`.toLowerCase();
+      if (searchStr.includes("weekly") || searchStr.includes("every week")) {
+        recurringRule = "Weekly";
+      } else if (searchStr.includes("daily") || searchStr.includes("every day")) {
+        recurringRule = "Daily";
+      } else if (searchStr.includes("monthly") || searchStr.includes("every month")) {
+        recurringRule = "Monthly";
+      }
+    }
+
     // 1. Create the Mission in the DB
     const mission = await prisma.mission.create({
       data: {
         title: data.title,
+        description: data.description || null,
         date: targetDate,
         estimatedMinutes: data.durationMinutes || 60,
         category: data.category || "General",
-        priority: "Medium"
+        priority: data.priority || "Medium",
+        recurringRule: recurringRule
       }
     });
 
