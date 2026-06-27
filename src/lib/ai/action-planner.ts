@@ -99,19 +99,34 @@ export class ActionPlanner {
         }
       });
       schedulingOptions = [{ start: startTime, end: endTime }];
+
+      // Sync times back to Mission record
+      await prisma.mission.update({
+        where: { id: mission.id },
+        data: { startTime, endTime }
+      });
     } else {
       // Auto-schedule in the first available slot
       schedulingOptions = await SchedulingEngine.findAvailableSlots(duration, targetDate);
       if (schedulingOptions.length > 0) {
+        const slotStart = schedulingOptions[0].start;
+        const slotEnd = schedulingOptions[0].end;
+
         scheduledBlock = await prisma.scheduledBlock.create({
           data: {
             title: data.title,
-            startTime: schedulingOptions[0].start,
-            endTime: schedulingOptions[0].end,
+            startTime: slotStart,
+            endTime: slotEnd,
             source: "AI",
             type: "Focus",
             missionId: mission.id
           }
+        });
+
+        // Sync times back to Mission record
+        await prisma.mission.update({
+          where: { id: mission.id },
+          data: { startTime: slotStart, endTime: slotEnd }
         });
       }
     }
