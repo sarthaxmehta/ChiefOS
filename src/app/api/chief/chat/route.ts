@@ -31,7 +31,9 @@ export async function POST(req: Request) {
     
     // Use the latest AI SDK v6 method for returning UI Message streams
     const anyStream = stream as any;
-    if (typeof anyStream.toDataStreamResponse === "function") {
+    if (typeof anyStream.toUIMessageStreamResponse === "function") {
+      return anyStream.toUIMessageStreamResponse();
+    } else if (typeof anyStream.toDataStreamResponse === "function") {
       return anyStream.toDataStreamResponse();
     } else if (typeof anyStream.toTextStreamResponse === "function") {
       return anyStream.toTextStreamResponse();
