@@ -1,4 +1,5 @@
 import { ChiefEngine } from "@/lib/ai/chief-engine";
+import { revalidatePath } from "next/cache";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -27,9 +28,17 @@ export async function POST(req: Request) {
       content: getMessageText(m)
     }));
 
-    const stream = await ChiefEngine.processMessage(latestMessage, sanitizedHistory, selectedDate);
+    const { stream, actionType } = await ChiefEngine.processMessage(latestMessage, sanitizedHistory, selectedDate);
     
-    // Use the latest AI SDK v6 method for returning UI Message streams
+    // Revalidate dashboard data for any action that mutates the database
+    const dataMutatingActions = ['task_created', 'task_rescheduled', 'task_decomposed'];
+    if (dataMutatingActions.includes(actionType)) {
+      revalidatePath("/dashboard");
+      revalidatePath("/dashboard/missions");
+      revalidatePath("/dashboard/schedule");
+    }
+
+    // Use the latest AI SDK method for returning UI Message streams
     const anyStream = stream as any;
     if (typeof anyStream.toUIMessageStreamResponse === "function") {
       return anyStream.toUIMessageStreamResponse();

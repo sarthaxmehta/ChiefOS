@@ -8,8 +8,8 @@ import { withFallback } from "./model-provider";
 export class ChiefEngine {
   /**
    * Main entrypoint for the AI interface.
-   * Receives a message, determines intent, executes deterministic actions,
-   * and returns a streaming readable response.
+   * Returns both the streaming response AND the action type
+   * so the API route knows whether to revalidate dashboard data.
    * 
    * Flow:
    *   1. Fast-path simple greetings (no AI call)
@@ -18,7 +18,7 @@ export class ChiefEngine {
    *   4. Context Gathering → Risk + Memory engines (no AI)
    *   5. Response Generator → streaming response (Groq, 14,400 RPD)
    */
-  static async processMessage(userMessage: string, history: any[] = [], selectedDateIso?: string) {
+  static async processMessage(userMessage: string, history: any[] = [], selectedDateIso?: string): Promise<{ stream: any; actionType: string }> {
     console.log("[ChiefEngine] Processing message:", userMessage, "Selected Date Context:", selectedDateIso);
     
     const normalized = userMessage.toLowerCase().trim().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g,"");
@@ -35,12 +35,12 @@ export class ChiefEngine {
     } else {
       // 1. Intent Engine (Groq → Gemini Flash Lite fallback)
       const intent = await IntentEngine.parseIntent(userMessage, history, selectedDateIso);
-      console.log("[ChiefEngine] Parsed Intent:", intent);
+      console.log("[ChiefEngine] Parsed Intent:", JSON.stringify(intent, null, 2));
 
       // 2. Action Planner (Deterministic Execution & Data Gathering)
       actionResult = await ActionPlanner.executeIntent(intent, selectedDateIso, userMessage);
     }
-    console.log("[ChiefEngine] Action Result:", actionResult);
+    console.log("[ChiefEngine] Action Result Type:", actionResult.type);
 
     // 3. Gather Context (Risk & Memory — both deterministic, no AI)
     const riskData = await RiskEngine.evaluateWorkloadRisk();
@@ -53,17 +53,18 @@ export class ChiefEngine {
     };
 
     // 4. Generate streaming response (Groq primary, fallback on error)
+    const actionType = actionResult.type || 'unknown';
+    
     try {
       const stream = ResponseGenerator.generateStreamingResponse(userMessage, fullContext, history, 0);
-      return stream;
+      return { stream, actionType };
     } catch (primaryError) {
       console.warn("[ChiefEngine] Primary response model failed, trying fallback...", primaryError);
       try {
         const fallbackStream = ResponseGenerator.generateStreamingResponse(userMessage, fullContext, history, 1);
-        return fallbackStream;
+        return { stream: fallbackStream, actionType };
       } catch (fallbackError) {
         console.error("[ChiefEngine] All response models failed:", fallbackError);
-        // Final deterministic fallback: return a text-only stream simulation
         throw new Error("AI response generation failed. Please try again in a moment.");
       }
     }
@@ -83,7 +84,6 @@ export class ChiefEngine {
     const mission = await prisma.mission.findUnique({ where: { id: missionId } });
     if (!mission) return false;
 
-    // TaskDecompositionEngine now uses Gemma 4 → Groq fallback internally
     const decomposed = await TaskDecompositionEngine.breakDownTask(mission.title);
     
     for (let i = 0; i < decomposed.subtasks.length; i++) {
@@ -113,21 +113,19 @@ export class ChiefEngine {
     const risk = await RiskEngine.evaluateWorkloadRisk();
     const memory = await MemoryEngine.getProductivityPatterns();
 
-    // Fetch the list of actual pending task titles from the database
     const pendingMissions = await prisma.mission.findMany({
       where: { status: "Pending" },
-      select: { title: true }
+      select: { title: true, priority: true, category: true }
     });
-    const taskList = pendingMissions.map(m => m.title).join(", ");
+    const taskList = pendingMissions.map(m => `${m.title} (${m.priority}, ${m.category || 'General'})`).join(", ");
 
-    // Use Gemma 4 for daily briefing (1,500 RPD, unlimited TPM) with fallback
     const result = await withFallback('daily_briefing', async (model) => {
       const { text } = await generateText({
         model,
         prompt: `Generate a markdown daily briefing for the ChiefOS user. 
           Risk Level: ${risk.riskLevel}. 
           Total Pending Tasks Count: ${risk.totalPendingTasks}.
-          List of Pending Tasks: ${taskList || 'None'}.
+          List of Pending Tasks (with priority and category): ${taskList || 'None'}.
           Optimal work time: ${memory.optimalDeepWorkTime}.
           Use professional, executive tone. Include headings for Summary, Priorities (referencing the real pending tasks listed above), and Risks.
           Keep it concise — no more than 300 words. Do not use generic placeholders like "[Insert Task 1]" or similar.`

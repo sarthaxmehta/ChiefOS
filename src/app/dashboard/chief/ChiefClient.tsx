@@ -88,6 +88,13 @@ export function ChiefClient({ initialUserName }: ChiefClientProps) {
     }
   }, [messages, isLoading]);
 
+  // Notify dashboard to refresh when AI finishes responding
+  useEffect(() => {
+    if (status === "ready" && messages.length > 0 && messages[messages.length - 1].role === "assistant") {
+      window.dispatchEvent(new Event("task-updated"));
+    }
+  }, [status, messages]);
+
   const handleSendMessage = (textToSend: string) => {
     if (!textToSend.trim()) return;
 

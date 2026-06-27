@@ -33,6 +33,13 @@ export function DashboardAIPanel({ selectedDate, onClose }: { selectedDate: Date
 
   const isLoading = status === "submitted" || status === "streaming";
 
+  // Notify dashboard to refresh when AI finishes responding
+  useEffect(() => {
+    if (status === "ready" && messages.length > 0 && messages[messages.length - 1].role === "assistant") {
+      window.dispatchEvent(new Event("task-updated"));
+    }
+  }, [status, messages]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInput(e.target.value);
   };
