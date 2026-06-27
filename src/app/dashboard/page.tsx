@@ -39,7 +39,7 @@ export default function TodayView() {
       <div className="flex gap-8 h-full">
         
         {/* Left Column: Planner */}
-        <div className="flex flex-col h-[calc(100vh-4rem)] w-[380px] shrink-0">
+        <div className="flex flex-col h-full w-[380px] shrink-0">
           <div className="flex items-center gap-4 px-2 mb-5 shrink-0 h-[90px]">
             <div className="relative overflow-hidden h-[90px] flex items-center">
               <AnimatePresence mode="popLayout">
@@ -107,7 +107,7 @@ export default function TodayView() {
         {/* Right Column: Todo's */}
         <motion.div 
           layout
-          className="flex-1 h-[calc(100vh-4rem)] relative min-w-0"
+          className="flex-1 h-full relative min-w-0"
         >
           <TodayTasks 
             selectedDate={selectedDate} 
@@ -126,7 +126,7 @@ export default function TodayView() {
         {/* AI Panel Slide-In */}
         <AnimatePresence>
           {showAIPanel && (
-            <DashboardAIPanel onClose={() => setShowAIPanel(false)} />
+            <DashboardAIPanel selectedDate={selectedDate} onClose={() => setShowAIPanel(false)} />
           )}
         </AnimatePresence>
         

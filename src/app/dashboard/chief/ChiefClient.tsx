@@ -20,14 +20,10 @@ import {
   Trash2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useChat } from "@ai-sdk/react";
+import ReactMarkdown from "react-markdown";
+import { DefaultChatTransport } from "ai";
 import { toast } from "sonner";
-
-interface Message {
-  id: string;
-  sender: "user" | "ai";
-  text: string;
-  isStreaming?: boolean;
-}
 
 interface ChiefClientProps {
   initialUserName: string;
@@ -39,14 +35,22 @@ export function ChiefClient({ initialUserName }: ChiefClientProps) {
   const [displayedGreeting, setDisplayedGreeting] = useState("");
   const [showCursor, setShowCursor] = useState(true);
   const [resetKey, setResetKey] = useState(0);
-  const [inputText, setInputText] = useState("");
   const [chatState, setChatState] = useState<"greeting" | "chat">("greeting");
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isAiTyping, setIsAiTyping] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [input, setInput] = useState("");
   
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Vercel AI SDK useChat integration connected to our modular backend engine
+  const { messages, sendMessage, status, setMessages } = useChat({
+    transport: new DefaultChatTransport({
+      api: `/api/chief/chat?selectedDate=${encodeURIComponent(new Date().toISOString())}`
+    }),
+    messages: []
+  });
+
+  const isLoading = status === "submitted" || status === "streaming";
 
   // Time-aware Greeting & Character writing effect
   useEffect(() => {
@@ -82,129 +86,34 @@ export function ChiefClient({ initialUserName }: ChiefClientProps) {
     if (chatBottomRef.current) {
       chatBottomRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages, isAiTyping]);
+  }, [messages, isLoading]);
 
   const handleSendMessage = (textToSend: string) => {
     if (!textToSend.trim()) return;
 
-    const userMsg: Message = {
-      id: Math.random().toString(36).substring(7),
-      sender: "user",
-      text: textToSend
-    };
-
-    setMessages(prev => [...prev, userMsg]);
-    setInputText("");
     setChatState("chat");
-    setIsAiTyping(true);
-
-    // Simulate AI response stream
-    setTimeout(() => {
-      simulateAiResponse(textToSend);
-    }, 1000);
-  };
-
-  const simulateAiResponse = (userPrompt: string) => {
-    let responseText = "";
-    const promptLower = userPrompt.toLowerCase();
-
-    if (promptLower.includes("script") || promptLower.includes("code")) {
-      responseText = `Here is a clean, robust TypeScript script to fetch API data with built-in error handling:
-
-\`\`\`typescript
-interface ApiResponse<T> {
-  data: T | null;
-  error: string | null;
-}
-
-async function fetchFromApi<T>(url: string): Promise<ApiResponse<T>> {
-  try {
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(\`HTTP error! status: \${response.status}\`);
-    }
-
-    const data = await response.json() as T;
-    return { data, error: null };
-  } catch (error: any) {
-    return { 
-      data: null, 
-      error: error.message || "An unexpected error occurred" 
-    };
-  }
-}
-\`\`\`
-
-You can import and use this function anywhere in your app. Let me know if you would like me to add pagination, authentication headers, or mock interfaces!`;
-    } else if (promptLower.includes("document") || promptLower.includes("analyze")) {
-      responseText = `I have successfully analyzed the uploaded document workspace. Here is a summary of the key findings:
-
-• **Architecture Design**: The codebase is configured as a Next.js App Router workspace utilizing Tailwind CSS v4 and Prisma ORM.
-• **Visual System**: Reconstructed around a premium glassmorphic visual layer, featuring smooth spring-based dynamic motion and liquid glow light rings.
-• **Pending Updates**: The mission planning and calendar schedules are operating successfully; AI orchestration integrations are currently queued.
-
-Would you like me to extract metadata, inspect specific directories, or run validation tests on the database models?`;
-    } else {
-      responseText = `Hello ${userName}! I am your Chief AI coordinator. 
-
-I'm currently running in sandbox mode while my backend model nodes are being initialized. I'm ready to assist you in designing mock flows, generating TypeScript code snippets, or summarizing document outlines.
-
-How can I help you customize ChiefOS today?`;
-    }
-
-    const aiMsgId = Math.random().toString(36).substring(7);
-    const newAiMsg: Message = {
-      id: aiMsgId,
-      sender: "ai",
-      text: "",
-      isStreaming: true
-    };
-
-    setMessages(prev => [...prev, newAiMsg]);
-    setIsAiTyping(false);
-
-    let currentLength = 0;
-    const words = responseText.split(" ");
-    let wordIndex = 0;
-
-    const interval = setInterval(() => {
-      if (wordIndex < words.length) {
-        const nextChunk = words.slice(0, wordIndex + 1).join(" ");
-        setMessages(prev => 
-          prev.map(m => m.id === aiMsgId ? { ...m, text: nextChunk } : m)
-        );
-        wordIndex++;
-      } else {
-        clearInterval(interval);
-        setMessages(prev => 
-          prev.map(m => m.id === aiMsgId ? { ...m, isStreaming: false } : m)
-        );
-      }
-    }, 45); // Smooth word streaming
+    setInput("");
+    sendMessage({ text: textToSend });
   };
 
   const handleResetChat = () => {
     setChatState("greeting");
     setMessages([]);
-    setInputText("");
-    setIsAiTyping(false);
+    setInput("");
     setResetKey(prev => prev + 1);
     toast.success("New conversation started!");
   };
 
+  // Determine helper status flags
+  const isAiTyping = isLoading && messages.length > 0 && messages[messages.length - 1].role === "user";
+
   return (
-    <div className={`relative w-full h-[calc(100vh-3.5rem)] overflow-hidden select-none bg-[#faf8f5] dark:bg-[#090807] transition-colors duration-700 flex flex-col items-center justify-between ${isFullScreen ? "fixed inset-0 z-50 h-screen w-screen" : ""}`}>
+    <div className={`relative w-full h-full overflow-hidden select-none bg-transparent transition-colors duration-700 flex flex-col items-center justify-between ${isFullScreen ? "fixed inset-0 z-50 h-screen w-screen" : ""}`}>
       
       {/* Dynamic Animated Flowing Gradient Backdrop Blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute top-[5%] left-[10%] w-[55%] h-[55%] rounded-full bg-gradient-to-tr from-orange-200/40 to-amber-100/30 blur-[130px] dark:from-amber-950/20 dark:to-orange-950/10 animate-blob-1" />
-        <div className="absolute bottom-[5%] right-[10%] w-[60%] h-[60%] rounded-full bg-gradient-to-br from-rose-100/50 to-orange-100/30 blur-[150px] dark:from-purple-950/20 dark:to-amber-950/10 animate-blob-2" />
+        <div className="absolute bottom-[5%] right-[10%] w-[60%] h-[60%] rounded-full bg-gradient-to-br from-rose-100/50 to-orange-100/30 blur-[150px] dark:from-orange-950/20 dark:to-amber-950/10 animate-blob-2" />
         <div className="absolute top-[40%] left-[35%] w-[40%] h-[40%] rounded-full bg-gradient-to-tr from-amber-100/40 to-rose-100/40 blur-[120px] dark:from-stone-900/40 dark:to-stone-850/40 animate-blob-3" />
         {/* Soft satin blur overlay */}
         <div className="absolute inset-0 bg-white/40 dark:bg-black/45 backdrop-blur-[4px]" />
@@ -265,8 +174,8 @@ How can I help you customize ChiefOS today?`;
               {/* Chat Box (Centered) */}
               <div className="w-full max-w-2xl">
                 <ChatInput 
-                  value={inputText}
-                  onChange={setInputText}
+                  value={input}
+                  onChange={setInput}
                   onSend={handleSendMessage}
                   inputRef={inputRef}
                 />
@@ -285,8 +194,16 @@ How can I help you customize ChiefOS today?`;
             >
               {/* Chat Message Thread */}
               <div className="flex-1 overflow-y-auto pr-2 space-y-6 custom-scrollbar min-h-0 py-4 mb-4">
-                {messages.map((msg) => {
-                  const isUser = msg.sender === "user";
+                {messages.map((msg, idx) => {
+                  const isUser = msg.role === "user";
+                  const isStreaming = isLoading && idx === messages.length - 1 && msg.role === "assistant";
+                  const messageText = msg.parts && msg.parts.length > 0
+                    ? msg.parts
+                        .filter((part) => part.type === "text")
+                        .map((part: any) => part.text)
+                        .join("")
+                    : (msg as any).content || "";
+
                   return (
                     <motion.div
                       key={msg.id}
@@ -308,9 +225,27 @@ How can I help you customize ChiefOS today?`;
                           ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-950 border-slate-950 dark:border-white font-medium" 
                           : "bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-slate-200/80 dark:border-white/5 text-slate-800 dark:text-slate-200"
                       }`}>
-                        <div className="whitespace-pre-wrap font-medium">
-                          {msg.text}
-                          {msg.isStreaming && (
+                        <div className="font-medium">
+                          {isUser ? (
+                            <div className="whitespace-pre-wrap">{messageText}</div>
+                          ) : (
+                            <div className="prose dark:prose-invert max-w-none text-slate-800 dark:text-slate-200">
+                              <ReactMarkdown
+                                components={{
+                                  p: ({ children }) => <p className="mb-2 last:mb-0 leading-normal">{children}</p>,
+                                  ul: ({ children }) => <ul className="list-disc pl-4 mb-2 space-y-1">{children}</ul>,
+                                  ol: ({ children }) => <ol className="list-decimal pl-4 mb-2 space-y-1">{children}</ol>,
+                                  li: ({ children }) => <li className="leading-normal">{children}</li>,
+                                  strong: ({ children }) => <strong className="font-bold text-amber-600 dark:text-amber-400">{children}</strong>,
+                                  code: ({ children }) => <code className="bg-slate-100 dark:bg-slate-800 rounded px-1.5 py-0.5 font-mono text-[11px] text-orange-650 dark:text-orange-400">{children}</code>,
+                                  pre: ({ children }) => <pre className="bg-slate-100 dark:bg-slate-850 rounded-xl p-3 my-2 overflow-x-auto font-mono text-[11px] border border-slate-200/40 dark:border-white/5">{children}</pre>,
+                                }}
+                              >
+                                {messageText}
+                              </ReactMarkdown>
+                            </div>
+                          )}
+                          {isStreaming && (
                             <span className="inline-block w-1.5 h-3.5 ml-1 bg-amber-500 animate-pulse align-middle" />
                           )}
                         </div>
@@ -349,8 +284,8 @@ How can I help you customize ChiefOS today?`;
               {/* Chat Input (Bottom) */}
               <div className="w-full shrink-0 pt-2 border-t border-slate-200/20 dark:border-white/5">
                 <ChatInput 
-                  value={inputText}
-                  onChange={setInputText}
+                  value={input}
+                  onChange={setInput}
                   onSend={handleSendMessage}
                   inputRef={inputRef}
                 />

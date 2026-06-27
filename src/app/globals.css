@@ -149,15 +149,24 @@
 }
 
 .mesh-bg {
-  background-color: var(--background);
-  background-image: linear-gradient(130deg, #f0f4f8 0%, #e2eaf4 25%, #d4e2f0 50%, #e6effa 75%, #f0f4f8 100%);
-  background-size: 400% 400%;
+  background-color: #faf8f5;
+  background-image: 
+    radial-gradient(at 10% 20%, rgba(254, 215, 170, 0.35) 0px, transparent 60%),
+    radial-gradient(at 90% 10%, rgba(254, 243, 199, 0.25) 0px, transparent 60%),
+    radial-gradient(at 90% 90%, rgba(254, 226, 226, 0.3) 0px, transparent 60%),
+    radial-gradient(at 10% 90%, rgba(255, 237, 213, 0.25) 0px, transparent 60%);
+  background-size: 200% 200%;
   background-attachment: fixed;
-  animation: mesh-flow 20s ease-in-out infinite;
+  animation: mesh-flow 25s ease-in-out infinite;
 }
 
 .dark .mesh-bg {
-  background-image: linear-gradient(130deg, #05070f 0%, #0d1428 25%, #081a30 50%, #0c1220 75%, #05070f 100%);
+  background-color: #090807;
+  background-image: 
+    radial-gradient(at 10% 20%, rgba(120, 53, 4, 0.15) 0px, transparent 60%),
+    radial-gradient(at 90% 10%, rgba(146, 64, 14, 0.1) 0px, transparent 60%),
+    radial-gradient(at 90% 90%, rgba(67, 20, 7, 0.12) 0px, transparent 60%),
+    radial-gradient(at 10% 90%, rgba(41, 37, 36, 0.15) 0px, transparent 60%);
 }
 
 .pastel-card {

@@ -1,6 +1,8 @@
 import { generateObject } from 'ai';
-import { getAIModel } from './model-provider';
+import { withFallback } from './model-provider';
 import { z } from 'zod';
+
+// ─── Decomposition Output Schema ─────────────────────────────────────────────
 
 export const TaskDecompositionSchema = z.object({
   subtasks: z.array(z.object({
@@ -17,23 +19,35 @@ export type DecomposedTask = z.infer<typeof TaskDecompositionSchema>;
 export class TaskDecompositionEngine {
   /**
    * Breaks a complex mission/topic down into actionable subtasks.
-   * @param topic The complex topic to break down
+   * Uses Gemma 4 (1,500 RPD, unlimited TPM) as primary — called occasionally.
+   * Falls back through the model chain automatically on failure.
    */
   static async breakDownTask(topic: string): Promise<DecomposedTask> {
     try {
-      const { object } = await generateObject({
-        model: getAIModel(),
-        schema: TaskDecompositionSchema,
-        system: `You are the Task Decomposition Engine for ChiefOS.
-          Your ONLY job is to break a complex topic down into 3-5 concrete, actionable subtasks.
-          Return strict JSON. Do not return plain text.`,
-        prompt: `Topic to decompose: ${topic}`
+      const result = await withFallback('task_decomposition', async (model) => {
+        const { object } = await generateObject({
+          model,
+          schema: TaskDecompositionSchema,
+          system: `You are the Task Decomposition Engine for ChiefOS.
+            Your ONLY job is to break a complex topic down into 3-5 concrete, actionable subtasks.
+            Each subtask should be specific enough to execute in one sitting.
+            Return strict JSON matching the schema. Do not return plain text.`,
+          prompt: `Topic to decompose: ${topic}`
+        });
+        return object;
       });
 
-      return object;
+      return result;
     } catch (error) {
-      console.error("TaskDecompositionEngine Error:", error);
-      return { subtasks: [] };
+      console.error("[TaskDecompositionEngine] All models failed:", error);
+      // Deterministic fallback: return a generic 3-subtask template
+      return {
+        subtasks: [
+          { title: `Research: ${topic}`, durationMinutes: 30, priority: 'High', energyLevel: 'High' },
+          { title: `Execute: ${topic}`, durationMinutes: 60, priority: 'High', energyLevel: 'Medium' },
+          { title: `Review: ${topic}`, durationMinutes: 20, priority: 'Medium', energyLevel: 'Low' },
+        ]
+      };
     }
   }
 }

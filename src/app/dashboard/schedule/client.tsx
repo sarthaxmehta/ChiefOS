@@ -286,7 +286,7 @@ export function ScheduleClient({ initialEvents, initialUnplannedTasks = [] }: Sc
   }, [cDate]);
 
   return (
-    <div className="px-8 py-4 w-full h-[calc(100vh-3.5rem)] flex flex-col max-w-none relative overflow-hidden">
+    <div className="px-8 py-4 w-full h-full flex flex-col max-w-none relative overflow-hidden">
       {/* Backdrop for closing Mini Calendar picker */}
       {showMiniCalendar && (
         <div 

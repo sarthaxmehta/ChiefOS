@@ -73,11 +73,7 @@ export function BriefingClient({
   const riskStyle = getRiskColor(riskLevel);
 
   return (
-    <div className="px-8 py-6 w-full h-[calc(100vh-3.5rem)] flex flex-col max-w-none relative overflow-y-auto select-none bg-slate-50/20 dark:bg-[#05060f] transition-colors duration-500 pb-24">
-      {/* Soft Ambient Background Orbs */}
-      <div className="absolute top-[-5%] right-[-5%] w-[40%] h-[40%] rounded-full bg-gradient-to-tr from-amber-500/5 to-orange-500/10 blur-[130px] pointer-events-none z-0 animate-pulse" />
-      <div className="absolute bottom-[-10%] left-[-5%] w-[45%] h-[45%] rounded-full bg-gradient-to-tr from-indigo-500/5 to-purple-500/5 blur-[120px] pointer-events-none z-0" />
-
+    <div className="px-8 py-6 w-full h-full flex flex-col max-w-none relative overflow-y-auto select-none bg-transparent transition-colors duration-500 pb-24">
       <div className="relative z-10 flex flex-col w-full max-w-5xl mx-auto flex-1 gap-8">
         
         {/* Header Block */}

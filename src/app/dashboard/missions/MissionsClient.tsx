@@ -173,12 +173,7 @@ export function MissionsClient({ initialMissions }: MissionsClientProps) {
   };
 
   return (
-    <div className="px-8 py-6 w-full h-[calc(100vh-3.5rem)] flex flex-col max-w-none relative overflow-hidden select-none bg-slate-50/20 dark:bg-[#05060f] transition-colors duration-500">
-      {/* Liquid Glass Background Light Orbs */}
-      <div className="absolute top-[-10%] left-[-10%] w-[45%] h-[45%] rounded-full bg-gradient-to-tr from-indigo-500/10 to-purple-500/10 blur-[130px] pointer-events-none z-0" />
-      <div className="absolute bottom-[-15%] right-[-10%] w-[50%] h-[50%] rounded-full bg-gradient-to-tr from-cyan-500/10 to-blue-500/15 blur-[140px] pointer-events-none z-0" />
-      <div className="absolute top-[25%] left-[30%] w-[35%] h-[35%] rounded-full bg-gradient-to-tr from-pink-500/5 to-rose-500/5 blur-[120px] pointer-events-none z-0" />
-
+    <div className="px-8 py-6 w-full h-full flex flex-col max-w-none relative overflow-hidden select-none bg-transparent transition-colors duration-500">
       {/* Main Content Floating Over Orbs */}
       <div className="relative z-10 flex flex-col flex-1 min-h-0">
         

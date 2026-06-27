@@ -5,17 +5,14 @@ import { motion } from "framer-motion";
 import { X, Send, BotMessageSquare, User } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-
-export function DashboardAIPanel({ onClose }: { onClose: () => void }) {
+export function DashboardAIPanel({ selectedDate, onClose }: { selectedDate: Date; onClose: () => void }) {
   const [input, setInput] = useState("");
   const { messages, sendMessage, status, error, setMessages } = useChat({
     transport: new DefaultChatTransport({
-      api: "/api/chief/chat"
+      api: `/api/chief/chat?selectedDate=${encodeURIComponent(selectedDate.toISOString())}`
     }),
     messages: []
-  });
-
-  // Load chat history on mount
+  });  // Load chat history on mount
   useEffect(() => {
     const saved = localStorage.getItem("chief_chat_history");
     if (saved) {
@@ -99,7 +96,7 @@ export function DashboardAIPanel({ onClose }: { onClose: () => void }) {
               </div>
             ) : (
               messages.map((m) => {
-                const messageText = m.parts
+                const messageText = m.parts && m.parts.length > 0
                   ? m.parts
                       .filter((part) => part.type === "text")
                       .map((part: any) => part.text)

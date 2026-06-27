@@ -4,12 +4,12 @@ import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 import { 
   LayoutDashboard, 
   Calendar as CalendarIcon, 
   Target, 
   CheckSquare, 
-  Settings, 
   BrainCircuit
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -21,10 +21,6 @@ const NAV_ITEMS = [
   { name: "Tasks", href: "/dashboard/missions", icon: Target },
   { name: "Chief", href: "/dashboard/chief", icon: BrainCircuit },
   { name: "Briefing", href: "/dashboard/briefing", icon: CheckSquare },
-];
-
-const BOTTOM_ITEMS = [
-  { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
 export function NavigationSidebar() {
@@ -112,16 +108,85 @@ export function NavigationSidebar() {
           </nav>
         </div>
 
-        {/* Bottom Navigation */}
-        <div className="px-2">
-          {BOTTOM_ITEMS.map((item) => (
-            <NavItem 
-              key={item.href} 
-              item={item} 
-              isActive={pathname === item.href} 
-              isExpanded={isHovered} 
-            />
-          ))}
+        {/* Bottom Navigation (Unified Settings & Profile) */}
+        <div className="px-2 flex flex-col gap-2">
+          <div className="border-t border-slate-200/50 dark:border-white/10 mt-2 pt-3 w-full">
+            <Link
+              href="/dashboard/settings"
+              className={`relative flex items-center h-[52px] rounded-2xl group transition-all duration-200 outline-none overflow-hidden w-full
+                ${pathname !== "/dashboard/settings" ? "hover:bg-black/5 dark:hover:bg-white/10" : ""}
+              `}
+            >
+              {/* Sliding Active Pill Background */}
+              {pathname === "/dashboard/settings" && (
+                <motion.div
+                  layoutId="active-nav-pill"
+                  className="absolute inset-0 bg-slate-900 dark:bg-slate-100 rounded-2xl shadow-md"
+                  initial={false}
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                />
+              )}
+
+              {/* Collapsed state (Avatar + pulse badge + tooltip) */}
+              {!isHovered ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="w-[56px] flex justify-center shrink-0 z-10 relative cursor-pointer">
+                      <Image
+                        src="https://api.dicebear.com/7.x/notionists/svg?seed=Sarthak"
+                        alt="Avatar"
+                        width={28}
+                        height={28}
+                        unoptimized
+                        className={`rounded-full border transition-colors ${
+                          pathname === "/dashboard/settings" ? "border-slate-800 dark:border-slate-200 bg-slate-900" : "border-border bg-slate-100 dark:bg-slate-800"
+                        }`}
+                      />
+                      <span className="absolute bottom-0 right-3 w-2 h-2 rounded-full bg-green-500 border border-white dark:border-slate-950 animate-pulse" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" sideOffset={10} className="font-semibold text-xs bg-popover/95 backdrop-blur-sm border-border">
+                    Settings · Sarthak (AI Active)
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
+                /* Expanded state (Avatar card) */
+                <div className="flex items-center w-full px-2.5 z-10 relative cursor-pointer">
+                  <div className="relative shrink-0 flex items-center">
+                    <Image
+                      src="https://api.dicebear.com/7.x/notionists/svg?seed=Sarthak"
+                      alt="Avatar"
+                      width={32}
+                      height={32}
+                      unoptimized
+                      className="rounded-full border border-border bg-slate-100 dark:bg-slate-800"
+                    />
+                    <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-green-500 border border-white dark:border-slate-950 animate-pulse" />
+                  </div>
+                  <motion.div
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="ml-3 flex flex-col min-w-0"
+                  >
+                    <span className={`font-bold text-[13px] leading-tight truncate transition-colors duration-200 ${
+                      pathname === "/dashboard/settings" ? "text-white dark:text-black" : "text-slate-850 dark:text-slate-200"
+                    }`}>
+                      Sarthak
+                    </span>
+                    <span className={`text-[8px] font-black tracking-wider uppercase flex items-center gap-1 mt-0.5 transition-colors duration-200 ${
+                      pathname === "/dashboard/settings" ? "text-green-300 dark:text-green-700" : "text-green-600 dark:text-green-400"
+                    }`}>
+                      <span className={`w-1 h-1 rounded-full animate-pulse ${
+                        pathname === "/dashboard/settings" ? "bg-green-300 dark:bg-green-700" : "bg-green-500"
+                      }`} />
+                      AI Active
+                    </span>
+                  </motion.div>
+                </div>
+              )}
+            </Link>
+          </div>
         </div>
       </motion.aside>
     </TooltipProvider>

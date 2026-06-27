@@ -1,16 +1,29 @@
 import { streamText } from 'ai';
-import { getAIModel } from './model-provider';
+import { getModelForTask } from './model-provider';
 import { format } from 'date-fns';
 
 export class ResponseGenerator {
   /**
-   * Translates the deterministic JSON outputs from the engines into a streaming conversational response.
+   * Translates the deterministic JSON outputs from the engines into a streaming
+   * conversational response.
+   * 
+   * Uses Groq Llama 3.3 70B (14,400 RPD) as primary — this is called on every message.
+   * If Groq fails, the caller should retry with fallbackIndex=1.
+   * 
+   * NOTE: streamText cannot use withFallback() because it returns a stream object,
+   * not a resolved Promise. Fallback handling for streaming is done in the ChiefEngine.
    */
-  static generateStreamingResponse(userMessage: string, engineData: any, history: any[] = []) {
-    
-    // We construct a system prompt that explicitly tells the LLM what data it has
+  static generateStreamingResponse(
+    userMessage: string,
+    engineData: any,
+    history: any[] = [],
+    fallbackIndex: number = 0
+  ) {
+    const model = getModelForTask('response_streaming', fallbackIndex);
+
+    // Construct a system prompt that explicitly tells the LLM what data it has
     // and how to present it without hallucinating.
-    const systemPrompt = `You are Chief, a highly capable, sophisticated, and polished Executive Assistant AI for ChiefOS (similar in tone to Gemini or ChatGPT).
+    const systemPrompt = `You are Chief, a highly capable, sophisticated, and polished Executive Assistant AI for ChiefOS.
       You are speaking directly to the user.
       
       CURRENT DATE AND TIME: ${new Date().toString()} (ISO: ${new Date().toISOString()})
@@ -27,14 +40,15 @@ export class ResponseGenerator {
       4. If a task is created or decomposed, summarize it clearly and ask if they would like to lock it in.
       5. Maintain a professional, premium, executive, yet friendly chief of staff persona. Do NOT act like a raw JSON parser.
       6. Do NOT output raw JSON to the user.
+      7. Keep responses concise but warm. Avoid unnecessary verbosity.
     `;
 
     return streamText({
-      model: getAIModel(),
+      model,
       system: systemPrompt,
       messages: [
         ...history,
-        { role: 'user', content: userMessage }
+        { role: 'user' as const, content: userMessage }
       ]
     });
   }

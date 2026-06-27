@@ -5,6 +5,8 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   try {
+    const url = new URL(req.url);
+    const selectedDate = url.searchParams.get("selectedDate") || undefined;
     const { messages } = await req.json();
 
     const getMessageText = (message: any): string => {
@@ -25,7 +27,7 @@ export async function POST(req: Request) {
       content: getMessageText(m)
     }));
 
-    const stream = await ChiefEngine.processMessage(latestMessage, sanitizedHistory);
+    const stream = await ChiefEngine.processMessage(latestMessage, sanitizedHistory, selectedDate);
     
     // Use the latest AI SDK v6 method for returning UI Message streams
     const anyStream = stream as any;

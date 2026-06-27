@@ -1,17 +1,35 @@
 "use server";
 
-import { parseMissionWithGemini } from "@/lib/gemini";
+import { generateObject } from "ai";
+import { withFallback } from "@/lib/ai/model-provider";
 import { ChiefEngine } from "@/lib/ai/chief-engine";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
+
+const MissionParseSchema = z.object({
+  title: z.string(),
+  deadline: z.string().optional().describe("ISO date string if a deadline is mentioned"),
+  estimatedHours: z.number().optional(),
+  priority: z.enum(["High", "Medium", "Low"]).optional(),
+  category: z.string().optional(),
+});
 
 export async function captureMission(input: string) {
   try {
-    const parsedData = await parseMissionWithGemini(input);
-    
-    if (!parsedData) {
-      throw new Error("Failed to parse mission data");
-    }
+    // Use the new model provider with automatic fallback
+    const parsedData = await withFallback('mission_parsing', async (model) => {
+      const { object } = await generateObject({
+        model,
+        schema: MissionParseSchema,
+        system: `You are an AI Chief of Staff. Parse the following user input and extract a mission definition.
+          Extract: title, deadline (ISO format), estimatedHours, priority (High/Medium/Low), category.
+          CURRENT DATE: ${new Date().toISOString()}
+          Resolve relative dates like "tomorrow", "next week" against the current date.`,
+        prompt: input,
+      });
+      return object;
+    });
 
     // Save to database
     const newMission = await prisma.mission.create({
@@ -35,7 +53,7 @@ export async function captureMission(input: string) {
   } catch (error) {
     console.error("Capture mission error, using fallback:", error);
     
-    // Fallback if Gemini fails (e.g. invalid API key, quota, parsing error)
+    // Deterministic fallback if all AI models fail
     const fallbackMission = await prisma.mission.create({
       data: {
         title: input.slice(0, 50) + (input.length > 50 ? "..." : ""),

@@ -16,7 +16,7 @@ export function GenerateSubMissionsButton({ missionId }: { missionId: string }) 
     if (res.success) {
       toast.success("Sub-missions successfully generated!");
     } else {
-      toast.error("Failed to generate sub-missions. Ensure Gemini API key is valid.");
+      toast.error("Failed to generate sub-missions. Please try again.");
     }
     setLoading(false);
   };
