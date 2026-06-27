@@ -81,7 +81,7 @@ You must return a valid JSON object matching the following structure:
             
             Return ONLY the valid JSON object. No other text, no markdown backticks.`;
 
-          const { text } = await generateText({
+          const { text } = await (generateText as any)({
             model,
             system: systemPrompt,
             messages: [
