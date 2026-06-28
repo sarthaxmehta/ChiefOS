@@ -7,7 +7,7 @@ export class ActionPlanner {
   /**
    * Translates the structured Intent into a deterministic execution plan
    * and executes the required engines.
-   * 
+   *
    * The AI extraction feeds directly into the prisma Mission model.
    * Any field the AI didn't extract gets a sensible default.
    */
@@ -17,7 +17,13 @@ export class ActionPlanner {
     switch (intent) {
       case 'create_task':
         return await this.handleCreateTask(extractedData, referenceDateIso, userMessage);
-      
+
+      case 'add_subtasks':
+        return await this.handleAddSubtasks(extractedData, userMessage);
+
+      case 'delete_task':
+        return await this.handleDeleteTask(extractedData);
+
       case 'task_decomposition':
         return await this.handleTaskDecomposition(extractedData);
 
@@ -27,13 +33,25 @@ export class ActionPlanner {
       case 'reschedule_tasks':
         return await this.handleRescheduleTasks(extractedData, referenceDateIso);
 
+      case 'complete_task':
+        return await this.handleCompleteTask(extractedData, userMessage);
+
+      case 'update_task':
+        return await this.handleUpdateTask(extractedData, userMessage);
+
+      case 'list_tasks':
+        return await this.handleListTasks(extractedData, referenceDateIso);
+
+      case 'clear_schedule':
+        return await this.handleClearSchedule(extractedData, referenceDateIso);
+
       case 'report_status':
         return await this.handleReportStatus();
-        
+
       case 'conversational':
-        return { 
-          type: 'conversational', 
-          reply: intentData.conversationalReply || "I'm here to help." 
+        return {
+          type: 'conversational',
+          reply: intentData.conversationalReply || "I'm here to help."
         };
 
       case 'unknown':
@@ -42,40 +60,41 @@ export class ActionPlanner {
     }
   }
 
-  // ─── Helpers for inferring schema fields ──────────────────────────────────
+  // ─── Inference Helpers ──────────────────────────────────────────────────────
 
   /** Infer recurring rule from raw text if AI missed it */
   private static inferRecurringRule(data: any, userMessage?: string): string | null {
     if (data?.recurringRule) return data.recurringRule;
     const searchStr = `${data?.title || ""} ${userMessage || ""}`.toLowerCase();
-    if (searchStr.includes("weekly") || searchStr.includes("every week")) return "Weekly";
-    if (searchStr.includes("daily") || searchStr.includes("every day") || searchStr.includes("everyday")) return "Daily";
-    if (searchStr.includes("monthly") || searchStr.includes("every month")) return "Monthly";
+    if (/\b(every week|weekly|each week)\b/.test(searchStr)) return "Weekly";
+    if (/\b(every day|daily|each day|everyday|each morning|each evening)\b/.test(searchStr)) return "Daily";
+    if (/\b(every month|monthly|each month)\b/.test(searchStr)) return "Monthly";
     return null;
   }
 
-  /** Infer category from title/description context */
+  /** Infer category from title/description/context */
   private static inferCategory(data: any): string {
     if (data?.category) return data.category;
-    const text = `${data?.title || ""} ${data?.description || ""}`.toLowerCase();
-    if (/\b(gym|workout|exercise|yoga|run|walk|health|meditat|stretch)\b/.test(text)) return "Health";
-    if (/\b(bill|payment|invoice|tax|budget|financ|bank|money)\b/.test(text)) return "Finance";
-    if (/\b(study|learn|course|exam|homework|class|lecture|assignment|research)\b/.test(text)) return "Study";
-    if (/\b(meet|call|sync|standup|interview|dinner|lunch|party)\b/.test(text)) return "Social";
-    if (/\b(code|deploy|review|debug|test|build|design|develop|feature|bug|pr |pull request)\b/.test(text)) return "Work";
-    if (/\b(clean|laundry|groceries|cook|shop|errand|pick up|drop off)\b/.test(text)) return "Personal";
-    if (/\b(email|report|document|file|organize|admin)\b/.test(text)) return "Admin";
+    const text = `${data?.title || ""} ${data?.description || ""} ${data?.context || ""}`.toLowerCase();
+    if (/\b(gym|workout|exercise|yoga|run|walk|health|meditat|stretch|fitness|swim)\b/.test(text)) return "Health";
+    if (/\b(bill|payment|invoice|tax|budget|financ|bank|money|salary|expense)\b/.test(text)) return "Finance";
+    if (/\b(study|learn|course|exam|homework|class|lecture|assignment|research|read|book|dsa|leet)\b/.test(text)) return "Study";
+    if (/\b(meet|call|sync|standup|interview|dinner|lunch|party|coffee|catch up)\b/.test(text)) return "Social";
+    if (/\b(code|deploy|review|debug|test|build|design|develop|feature|bug|pr |pull request|api|backend|frontend)\b/.test(text)) return "Work";
+    if (/\b(clean|laundry|groceries|cook|shop|errand|pick up|drop off|house)\b/.test(text)) return "Personal";
+    if (/\b(email|report|document|file|organize|admin|submit|fill|form)\b/.test(text)) return "Admin";
+    if (/\b(shop|buy|order|purchase|amazon|mall)\b/.test(text)) return "Shopping";
     return "General";
   }
 
-  /** Infer task type from title/description context */
+  /** Infer task type from title/description/context */
   private static inferType(data: any): string {
     if (data?.type) return data.type;
     const text = `${data?.title || ""} ${data?.description || ""}`.toLowerCase();
-    if (/\b(meet|call|sync|standup|interview|check-in|checkin)\b/.test(text)) return "Meeting";
-    if (/\b(gym|workout|break|lunch|walk|nap|rest|stretch)\b/.test(text)) return "Break";
-    if (/\b(email|invoice|file|organize|admin|clean|errand)\b/.test(text)) return "Admin";
-    if (/\b(shop|groceries|personal|cook|laundry)\b/.test(text)) return "Personal";
+    if (/\b(meet|call|sync|standup|interview|check-in|checkin|catch up|zoom|teams|hangout)\b/.test(text)) return "Meeting";
+    if (/\b(gym|workout|break|lunch|walk|nap|rest|stretch|run|yoga|swim|exercise)\b/.test(text)) return "Break";
+    if (/\b(email|invoice|file|organize|admin|clean|errand|form|submit|fill)\b/.test(text)) return "Admin";
+    if (/\b(shop|groceries|personal|cook|laundry|pick up|buy)\b/.test(text)) return "Personal";
     return "Focus";
   }
 
@@ -83,8 +102,10 @@ export class ActionPlanner {
   private static inferEnergy(data: any): string {
     if (data?.energyRequired) return data.energyRequired;
     const text = `${data?.title || ""} ${data?.description || ""}`.toLowerCase();
-    if (/\b(code|write|design|research|study|debug|develop|deep work|brainstorm)\b/.test(text)) return "High";
-    if (/\b(email|admin|clean|organize|file|errand|grocery|shop)\b/.test(text)) return "Low";
+    if (/\b(code|write|design|research|study|debug|develop|deep work|brainstorm|build|architect|dsa|leet)\b/.test(text)) return "High";
+    if (/\b(gym|workout|run|exercise|swim)\b/.test(text)) return "High";
+    if (/\b(meet|call|sync|interview|plan|review)\b/.test(text)) return "Medium";
+    if (/\b(email|admin|clean|organize|file|errand|grocery|shop|lunch|nap|walk)\b/.test(text)) return "Low";
     return "Medium";
   }
 
@@ -94,12 +115,23 @@ export class ActionPlanner {
     if (priority === "High") return "Red";
     const colorMap: Record<string, string> = {
       Work: "Blue", Finance: "Yellow", Health: "Green", Study: "Purple",
-      Social: "Orange", Personal: "Green", Admin: "Blue", General: "Red"
+      Social: "Orange", Personal: "Green", Admin: "Blue", Shopping: "Orange", General: "Red"
     };
     return colorMap[category] || "Red";
   }
 
-  // ─── Create Task Handler ──────────────────────────────────────────────────
+  /**
+   * Compute a mission score (0–100) from priority, energy, and type.
+   * Higher score = more strategically important mission.
+   */
+  private static computeMissionScore(priority: string, energyRequired: string, type: string): number {
+    const priorityScore = priority === "High" ? 40 : priority === "Medium" ? 25 : 10;
+    const energyScore = energyRequired === "High" ? 30 : energyRequired === "Medium" ? 20 : 10;
+    const typeScore = type === "Focus" ? 20 : type === "Meeting" ? 15 : type === "Admin" ? 10 : 5;
+    return Math.min(100, priorityScore + energyScore + typeScore);
+  }
+
+  // ─── Create Task Handler ────────────────────────────────────────────────────
 
   private static async handleCreateTask(data: any, referenceDateIso?: string, userMessage?: string) {
     if (!data || !data.title) {
@@ -107,8 +139,8 @@ export class ActionPlanner {
     }
 
     // Resolve date
-    const targetDate = data.targetDateIso 
-      ? new Date(data.targetDateIso) 
+    const targetDate = data.targetDateIso
+      ? new Date(data.targetDateIso)
       : (referenceDateIso ? new Date(referenceDateIso) : new Date());
 
     // Infer all schema fields
@@ -119,6 +151,7 @@ export class ActionPlanner {
     const priority = data.priority || "Medium";
     const color = this.inferColor(data, category, priority);
     const duration = data.durationMinutes || 60;
+    const missionScore = this.computeMissionScore(priority, energyRequired, type);
 
     // Create the Mission with ALL schema fields populated
     const mission = await prisma.mission.create({
@@ -131,12 +164,40 @@ export class ActionPlanner {
         type,
         priority,
         category,
+        context: data.context || null,
+        preferredTime: data.preferredTime || null,
+        notes: data.notes || null,
         color,
         tags: data.tags || null,
         recurringRule,
-        isAIScheduled: false, // will be set to true if we auto-schedule
+        missionScore,
+        isAIScheduled: false,
       }
     });
+
+    // Write CalendarEvent if meeting (with attendees / location)
+    if (type === "Meeting" || data.attendees || data.location) {
+      if (data.startTimeString) {
+        const evStart = new Date(targetDate);
+        const [h, m] = data.startTimeString.split(':').map(Number);
+        evStart.setHours(h, m, 0, 0);
+        const evEnd = data.endTimeString
+          ? (() => { const d = new Date(targetDate); const [eh, em] = data.endTimeString.split(':').map(Number); d.setHours(eh, em, 0, 0); return d; })()
+          : new Date(evStart.getTime() + duration * 60000);
+
+        await prisma.calendarEvent.create({
+          data: {
+            title: data.title,
+            description: data.description || null,
+            location: data.location || null,
+            startTime: evStart,
+            endTime: evEnd,
+            recurringRule: recurringRule || null,
+            attendees: data.attendees || null,
+          }
+        });
+      }
+    }
 
     // ─── Scheduling Logic ───
     let schedulingOptions: any[] = [];
@@ -178,7 +239,10 @@ export class ActionPlanner {
 
     } else if (!recurringRule || recurringRule === "One-time") {
       // No specific time, not recurring → auto-schedule in first available slot
-      schedulingOptions = await SchedulingEngine.findAvailableSlots(duration, targetDate);
+      // Honour preferredTime when finding slots
+      schedulingOptions = await SchedulingEngine.findAvailableSlots(
+        duration, targetDate, "default", data.preferredTime
+      );
       if (schedulingOptions.length > 0) {
         const slotStart = schedulingOptions[0].start;
         const slotEnd = schedulingOptions[0].end;
@@ -200,8 +264,7 @@ export class ActionPlanner {
         });
       }
     }
-    // For recurring tasks without specific time: DON'T auto-schedule.
-    // Just create the mission with the recurrence rule — user can schedule later.
+    // For recurring tasks without specific time: just create the mission with the recurrence rule.
 
     return {
       type: 'task_created',
@@ -215,17 +278,298 @@ export class ActionPlanner {
     };
   }
 
-  // ─── Task Decomposition Handler ───────────────────────────────────────────
+  // ─── Add Subtasks to Existing Task ─────────────────────────────────────────
+
+  private static async handleAddSubtasks(data: any, userMessage?: string) {
+    if (!data?.title) {
+      return { type: 'error', message: "I need the task name to add subtasks to." };
+    }
+    if (!data?.subtasks || data.subtasks.length === 0) {
+      return { type: 'error', message: "I need the subtask names to add." };
+    }
+
+    // Find the existing mission by title (partial, case-insensitive)
+    const mission = await prisma.mission.findFirst({
+      where: { title: { contains: data.title } },
+      include: { subMissions: true }
+    });
+
+    if (!mission) {
+      return {
+        type: 'error',
+        message: `I couldn't find a task matching "${data.title}". Please check the task name and try again.`
+      };
+    }
+
+    // Add each subtask with enriched fields
+    const created = [];
+    const startOrder = mission.subMissions.length;
+    const totalSubs = data.subtasks.length;
+    const perSubMinutes = mission.estimatedMinutes
+      ? Math.round(mission.estimatedMinutes / totalSubs)
+      : 30;
+
+    for (let i = 0; i < totalSubs; i++) {
+      const subTitle = data.subtasks[i];
+      const subText = subTitle.toLowerCase();
+
+      // Infer per-subtask difficulty & energy from keywords
+      let difficulty = "Medium";
+      let energyLevel = "Medium";
+      if (/\b(research|write|code|design|build|implement|architect|debug)\b/.test(subText)) {
+        difficulty = "Hard";
+        energyLevel = "High";
+      } else if (/\b(review|check|read|organize|email|admin|setup|config)\b/.test(subText)) {
+        difficulty = "Easy";
+        energyLevel = "Low";
+      }
+
+      const sub = await prisma.subMission.create({
+        data: {
+          missionId: mission.id,
+          title: subTitle,
+          description: null,
+          estimatedMinutes: perSubMinutes,
+          order: startOrder + i,
+          priority: i === 0 ? 'High' : 'Medium', // First step gets priority bump
+          energyLevel,
+          difficulty,
+        }
+      });
+      created.push(sub);
+    }
+
+    return {
+      type: 'subtasks_added',
+      mission: { id: mission.id, title: mission.title },
+      subtasksAdded: created,
+      totalSubtasks: startOrder + created.length,
+    };
+  }
+
+  // ─── Delete Task Handler ────────────────────────────────────────────────────
+
+  private static async handleDeleteTask(data: any) {
+    if (!data?.title) {
+      return { type: 'error', message: "I need the task name to delete." };
+    }
+
+    // Find all matching missions (handles "delete all Mike tasks" type requests)
+    const missions = await prisma.mission.findMany({
+      where: { title: { contains: data.title } }
+    });
+
+    if (missions.length === 0) {
+      return {
+        type: 'error',
+        message: `I couldn't find any task matching "${data.title}".`
+      };
+    }
+
+    const deleted = [];
+    for (const mission of missions) {
+      await prisma.scheduledBlock.deleteMany({ where: { missionId: mission.id } });
+      await prisma.subMission.deleteMany({ where: { missionId: mission.id } });
+      await prisma.missionActivity.deleteMany({ where: { missionId: mission.id } });
+      await prisma.workSession.deleteMany({ where: { missionId: mission.id } });
+      await prisma.scheduleSuggestion.deleteMany({ where: { missionId: mission.id } });
+      await prisma.mission.delete({ where: { id: mission.id } });
+      deleted.push({ id: mission.id, title: mission.title });
+    }
+
+    return {
+      type: 'task_deleted',
+      deletedCount: deleted.length,
+      deletedTasks: deleted,
+    };
+  }
+
+  // ─── Complete Task Handler ──────────────────────────────────────────────────
+
+  private static async handleCompleteTask(data: any, userMessage?: string) {
+    if (!data?.title) {
+      return { type: 'error', message: "I need the task name to mark as complete." };
+    }
+
+    const mission = await prisma.mission.findFirst({
+      where: { title: { contains: data.title } }
+    });
+
+    if (!mission) {
+      return {
+        type: 'error',
+        message: `I couldn't find a task matching "${data.title}".`
+      };
+    }
+
+    const updated = await prisma.mission.update({
+      where: { id: mission.id },
+      data: {
+        status: "Completed",
+      }
+    });
+
+    // Log activity
+    await prisma.missionActivity.create({
+      data: {
+        missionId: mission.id,
+        action: "Marked as Completed via AI"
+      }
+    });
+
+    return {
+      type: 'task_completed',
+      mission: updated,
+    };
+  }
+
+  // ─── Update Task Handler ────────────────────────────────────────────────────
+
+  private static async handleUpdateTask(data: any, userMessage?: string) {
+    if (!data?.title) {
+      return { type: 'error', message: "I need the task name to update." };
+    }
+
+    const mission = await prisma.mission.findFirst({
+      where: { title: { contains: data.title } }
+    });
+
+    if (!mission) {
+      return {
+        type: 'error',
+        message: `I couldn't find a task matching "${data.title}".`
+      };
+    }
+
+    // Build update payload — only include fields that changed
+    const updatePayload: Record<string, any> = {};
+    if (data.newStatus)    updatePayload.status    = data.newStatus;
+    if (data.newPriority)  updatePayload.priority  = data.newPriority;
+    if (data.newCategory)  updatePayload.category  = data.newCategory;
+    if (data.newNotes)     updatePayload.notes     = data.newNotes;
+    if (data.newColor)     updatePayload.color     = data.newColor;
+    if (data.description)  updatePayload.description = data.description;
+    if (data.context)      updatePayload.context   = data.context;
+    if (data.notes && !data.newNotes) updatePayload.notes = data.notes;
+
+    // Recalculate score if priority or energy changed
+    if (data.newPriority) {
+      const newEnergy = mission.energyRequired || "Medium";
+      updatePayload.missionScore = this.computeMissionScore(data.newPriority, newEnergy, mission.type || "Focus");
+    }
+
+    if (Object.keys(updatePayload).length === 0) {
+      return { type: 'error', message: "I couldn't determine what to update. Please specify the field to change." };
+    }
+
+    const updated = await prisma.mission.update({
+      where: { id: mission.id },
+      data: updatePayload,
+    });
+
+    // Log activity
+    const changedFields = Object.keys(updatePayload).join(", ");
+    await prisma.missionActivity.create({
+      data: {
+        missionId: mission.id,
+        action: `Updated fields via AI: ${changedFields}`
+      }
+    });
+
+    return {
+      type: 'task_updated',
+      mission: updated,
+      updatedFields: Object.keys(updatePayload),
+    };
+  }
+
+  // ─── List Tasks Handler ─────────────────────────────────────────────────────
+
+  private static async handleListTasks(data: any, referenceDateIso?: string) {
+    const where: Record<string, any> = {};
+
+    if (data?.filterStatus)   where.status   = data.filterStatus;
+    if (data?.filterPriority) where.priority  = data.filterPriority;
+    if (data?.filterCategory) where.category = { contains: data.filterCategory };
+
+    // If a date is specified, filter to that day
+    if (data?.targetDateIso) {
+      const targetDate = new Date(data.targetDateIso);
+      const start = new Date(targetDate); start.setHours(0, 0, 0, 0);
+      const end   = new Date(targetDate); end.setHours(23, 59, 59, 999);
+      where.date = { gte: start, lte: end };
+    }
+
+    const missions = await prisma.mission.findMany({
+      where,
+      orderBy: [{ priority: 'desc' }, { date: 'asc' }, { createdAt: 'asc' }],
+      take: 25,
+    });
+
+    return {
+      type: 'tasks_listed',
+      count: missions.length,
+      filters: {
+        status: data?.filterStatus || null,
+        priority: data?.filterPriority || null,
+        category: data?.filterCategory || null,
+        date: data?.targetDateIso || null,
+      },
+      missions,
+    };
+  }
+
+  // ─── Clear Schedule Handler ──────────────────────────────────────────────────
+
+  private static async handleClearSchedule(data: any, referenceDateIso?: string) {
+    const targetDate = data?.targetDateIso
+      ? new Date(data.targetDateIso)
+      : (referenceDateIso ? new Date(referenceDateIso) : new Date());
+
+    const startOfTarget = new Date(targetDate); startOfTarget.setHours(0, 0, 0, 0);
+    const endOfTarget   = new Date(targetDate); endOfTarget.setHours(23, 59, 59, 999);
+
+    // Find all scheduled blocks for that day
+    const blocks = await prisma.scheduledBlock.findMany({
+      where: {
+        startTime: { gte: startOfTarget, lte: endOfTarget }
+      }
+    });
+
+    // Remove all scheduled blocks for that day
+    const { count } = await prisma.scheduledBlock.deleteMany({
+      where: {
+        startTime: { gte: startOfTarget, lte: endOfTarget }
+      }
+    });
+
+    // Unset startTime/endTime/isAIScheduled on affected missions
+    const missionIds = [...new Set(blocks.map(b => b.missionId).filter(Boolean))] as string[];
+    if (missionIds.length > 0) {
+      await prisma.mission.updateMany({
+        where: { id: { in: missionIds } },
+        data: { startTime: null, endTime: null, isAIScheduled: false }
+      });
+    }
+
+    return {
+      type: 'schedule_cleared',
+      targetDate: targetDate.toISOString().split('T')[0],
+      blocksRemoved: count,
+      missionsUnscheduled: missionIds.length,
+    };
+  }
+
+  // ─── Task Decomposition Handler ─────────────────────────────────────────────
 
   private static async handleTaskDecomposition(data: any) {
-    // Support both 'topic' and 'title' fields — LLMs sometimes put the topic in title
     const topic = data?.topic || data?.title;
     if (!topic) {
       return { type: 'error', message: "I need a topic or task name to break down." };
     }
 
     const decomposed = await TaskDecompositionEngine.breakDownTask(topic);
-    
+
     return {
       type: 'task_decomposed',
       topic,
@@ -233,33 +577,26 @@ export class ActionPlanner {
     };
   }
 
-  // ─── Get Schedule Handler ─────────────────────────────────────────────────
+  // ─── Get Schedule Handler ───────────────────────────────────────────────────
 
   private static async handleGetSchedule(data: any, referenceDateIso?: string) {
-    const targetDate = data?.targetDateIso 
-      ? new Date(data.targetDateIso) 
+    const targetDate = data?.targetDateIso
+      ? new Date(data.targetDateIso)
       : (referenceDateIso ? new Date(referenceDateIso) : new Date());
 
-    const startOfTarget = new Date(targetDate);
-    startOfTarget.setHours(0, 0, 0, 0);
-    const endOfTarget = new Date(targetDate);
-    endOfTarget.setHours(23, 59, 59, 999);
+    const startOfTarget = new Date(targetDate); startOfTarget.setHours(0, 0, 0, 0);
+    const endOfTarget   = new Date(targetDate); endOfTarget.setHours(23, 59, 59, 999);
 
     const missions = await prisma.mission.findMany({
       where: {
-        date: {
-          gte: startOfTarget,
-          lte: endOfTarget
-        }
-      }
+        date: { gte: startOfTarget, lte: endOfTarget }
+      },
+      orderBy: { startTime: 'asc' }
     });
 
     const blocks = await prisma.scheduledBlock.findMany({
       where: {
-        startTime: {
-          gte: startOfTarget,
-          lte: endOfTarget
-        }
+        startTime: { gte: startOfTarget, lte: endOfTarget }
       },
       orderBy: { startTime: 'asc' }
     });
@@ -272,24 +609,19 @@ export class ActionPlanner {
     };
   }
 
-  // ─── Reschedule Tasks Handler ─────────────────────────────────────────────
+  // ─── Reschedule Tasks Handler ───────────────────────────────────────────────
 
   private static async handleRescheduleTasks(data: any, referenceDateIso?: string) {
     if (!data || !data.title) {
       return { type: 'error', message: "I need a task title to reschedule." };
     }
 
-    const targetDate = data.targetDateIso 
-      ? new Date(data.targetDateIso) 
+    const targetDate = data.targetDateIso
+      ? new Date(data.targetDateIso)
       : (referenceDateIso ? new Date(referenceDateIso) : new Date());
 
-    // Find the mission using partial title matching (case-insensitive)
     const mission = await prisma.mission.findFirst({
-      where: {
-        title: {
-          contains: data.title
-        }
-      }
+      where: { title: { contains: data.title } }
     });
 
     if (!mission) {
@@ -298,7 +630,6 @@ export class ActionPlanner {
 
     const duration = mission.estimatedMinutes || 60;
 
-    // If user specified a new time, use it directly
     if (data.startTimeString) {
       const newStart = new Date(targetDate);
       const [hours, minutes] = data.startTimeString.split(':').map(Number);
@@ -318,7 +649,6 @@ export class ActionPlanner {
         data: { date: targetDate, startTime: newStart, endTime: newEnd }
       });
 
-      // Update or create scheduled block
       await prisma.scheduledBlock.deleteMany({ where: { missionId: mission.id } });
       await prisma.scheduledBlock.create({
         data: {
@@ -341,9 +671,11 @@ export class ActionPlanner {
       };
     }
 
-    // No specific time → find available slot on the new date
-    const slots = await SchedulingEngine.findAvailableSlots(duration, targetDate);
-    
+    // No specific time → find available slot on the new date (honour preferredTime)
+    const slots = await SchedulingEngine.findAvailableSlots(
+      duration, targetDate, "default", mission.preferredTime || undefined
+    );
+
     if (slots.length > 0) {
       const newStart = slots[0].start;
       const newEnd = slots[0].end;
@@ -391,20 +723,31 @@ export class ActionPlanner {
     };
   }
 
-  // ─── Report Status Handler ────────────────────────────────────────────────
+  // ─── Report Status Handler ──────────────────────────────────────────────────
 
   private static async handleReportStatus() {
+    const now = new Date();
+    const startOfToday = new Date(now); startOfToday.setHours(0, 0, 0, 0);
+    const endOfToday   = new Date(now); endOfToday.setHours(23, 59, 59, 999);
+
     const pendingMissions = await prisma.mission.findMany({
       where: { status: "Pending" }
+    });
+
+    const inProgressMissions = await prisma.mission.findMany({
+      where: { status: "In Progress" }
     });
 
     const completedMissions = await prisma.mission.findMany({
       where: { status: "Completed" }
     });
 
+    const todaysMissions = await prisma.mission.findMany({
+      where: { date: { gte: startOfToday, lte: endOfToday } }
+    });
+
     const totalEstimatedMinutes = pendingMissions.reduce((acc, m) => acc + (m.estimatedMinutes || 60), 0);
 
-    // Categorize pending work
     const byPriority = { High: 0, Medium: 0, Low: 0 };
     const byCategory: Record<string, number> = {};
     for (const m of pendingMissions) {
@@ -417,8 +760,10 @@ export class ActionPlanner {
     return {
       type: 'status_report',
       pendingCount: pendingMissions.length,
+      inProgressCount: inProgressMissions.length,
       completedCount: completedMissions.length,
-      totalEstimatedHours: Math.round(totalEstimatedMinutes / 60),
+      todaysTaskCount: todaysMissions.length,
+      totalEstimatedHours: Math.round(totalEstimatedMinutes / 60 * 10) / 10,
       byPriority,
       byCategory,
       pendingTasks: pendingMissions.slice(0, 10).map(m => ({
@@ -426,6 +771,11 @@ export class ActionPlanner {
         priority: m.priority,
         category: m.category,
         dueDate: m.date ? m.date.toISOString().split('T')[0] : null
+      })),
+      inProgressTasks: inProgressMissions.slice(0, 5).map(m => ({
+        title: m.title,
+        priority: m.priority,
+        category: m.category,
       })),
       recentCompletedMissions: completedMissions.slice(0, 5).map(m => ({
         title: m.title,
