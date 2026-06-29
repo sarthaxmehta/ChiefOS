@@ -30,7 +30,13 @@ export class RecurringEngine {
     } else if (rule === "Weekly") {
       nextDate.setDate(nextDate.getDate() + 7);
     } else if (rule === "Monthly") {
+      const expectedMonth = (nextDate.getMonth() + 1) % 12;
       nextDate.setMonth(nextDate.getMonth() + 1);
+      // Handle month overflow (e.g., Jan 31 -> Mar 3 because Feb 31 doesn't exist)
+      // If it overflowed past the expected next month, snap it back to the last day of the expected month
+      if (nextDate.getMonth() !== expectedMonth) {
+        nextDate.setDate(0); 
+      }
     }
 
     // Create the new mission

@@ -151,6 +151,7 @@ DATE RESOLUTION RULES (CRITICAL — always resolve to YYYY-MM-DD):
 - "tomorrow" → ${tomorrowStr}
 - "this [weekday]" / "next [weekday]" → calculate the upcoming occurrence
 - "end of the week" / "this Friday" → calculate upcoming Friday
+- "Nth of the month" (e.g. "30th") → find the NEXT upcoming occurrence of that day number. If today is the 10th and they ask for the 30th, use this month's 30th. If today is the 25th and they ask for the 15th, use NEXT month's 15th.
 - "in N days" → add N days to today
 - "next week" → Monday of next week
 - If no date given → use ${todayStr}
