@@ -10,10 +10,12 @@ export const IntentSchema = z.object({
   intent: z.enum([
     'create_task',
     'add_subtasks',       // Add subtasks to an EXISTING task (never creates a new one)
+    'update_subtask',     // Mark a subtask done, rename it, change its priority
+    'delete_subtask',     // Remove a subtask from a mission
     'delete_task',        // Delete/remove an existing task by title
     'reschedule_tasks',   // Move an existing task to a new time/date
     'complete_task',      // Mark an existing task as done / completed
-    'update_task',        // Partial update: priority, notes, category, description, color, etc.
+    'update_task',        // Full edit: change title, time, duration, priority, category, etc.
     'list_tasks',         // Show/list tasks — optionally filtered by status, priority, category, date
     'clear_schedule',     // Delete all scheduled blocks for a given day (unschedule, not delete missions)
     'task_decomposition', // Break a topic into subtasks (informational, may or may not save)
@@ -71,17 +73,37 @@ export const IntentSchema = z.object({
     topic: z.string().optional()
       .describe("For task_decomposition: the topic or project name to break down."),
 
-    // ─── Subtasks (for add_subtasks intent) ─────────────────────────────────
+    // ─── Subtasks (for add_subtasks, update_subtask, delete_subtask) ────────
     subtasks: z.array(z.string()).optional()
-      .describe("For add_subtasks intent: list of subtask titles to add to the existing task. Extract these from the user's message."),
+      .describe("For add_subtasks intent: list of subtask titles to add. Extract these from the user's message."),
+    subtaskTitle: z.string().optional()
+      .describe("For update_subtask / delete_subtask: The title or number of the SPECIFIC subtask to update/delete. E.g. 'mark step 1 done' → 'step 1'. 'delete the design subtask' → 'design'."),
+    newSubtaskStatus: z.enum(['Pending', 'In Progress', 'Completed']).optional()
+      .describe("For update_subtask: 'done'/'finished' → Completed. 'start' → In Progress."),
+    newSubtaskTitle: z.string().optional()
+      .describe("For update_subtask: the new name for the subtask if renaming."),
 
     // ─── Update Fields (for update_task intent) ──────────────────────────────
+    newTitle: z.string().optional()
+      .describe("For update_task: the NEW title if the user wants to rename the task. 'rename X to Y' → Y."),
+    newDateIso: z.string().optional()
+      .describe("For update_task: the NEW date if the user wants to change the date. Resolve to YYYY-MM-DD."),
+    newStartTime: z.string().optional()
+      .describe("For update_task: the NEW start time in HH:MM format. 'change time to 5 PM' → '17:00'."),
+    newEndTime: z.string().optional()
+      .describe("For update_task: the NEW end time in HH:MM format."),
+    newDurationMinutes: z.number().optional()
+      .describe("For update_task: the NEW duration in minutes. 'change duration to 2 hours' → 120."),
     newStatus: z.enum(['Pending', 'In Progress', 'Completed', 'Cancelled', 'On Hold']).optional()
       .describe("For complete_task/update_task: the new status to set. 'done'/'finished'/'completed'/'mark complete' → Completed, 'start'/'working on' → In Progress, 'cancel'/'abort' → Cancelled, 'hold'/'pause' → On Hold."),
     newPriority: z.enum(['Low', 'Medium', 'High']).optional()
       .describe("For update_task: the NEW priority to set on an existing task. 'bump to high'/'urgent now'/'raise priority' → High."),
     newCategory: z.string().optional()
       .describe("For update_task: the NEW category to set on an existing task."),
+    newType: z.enum(['Focus', 'Meeting', 'Break', 'Admin', 'Personal']).optional()
+      .describe("For update_task: the NEW type of the task."),
+    newEnergyRequired: z.enum(['Low', 'Medium', 'High']).optional()
+      .describe("For update_task: the NEW energy required."),
     newNotes: z.string().optional()
       .describe("For update_task: notes to add/replace on an existing task. Triggered by 'add a note to X', 'note: Y'."),
     newColor: z.string().optional()
@@ -160,6 +182,14 @@ INTENT CLASSIFICATION RULES:
   Examples: "delete the gym session", "remove tomorrow's standup", "cancel my meeting with Sarah", "delete all tasks with Mike".
   → title = task name fragment to match.
 
+- "update_subtask": User wants to EDIT, RENAME, or COMPLETE a SUBTASK.
+  Examples: "mark step 1 of my project as done", "change the first subtask to research", "finish the design subtask".
+  → title = parent task name, subtaskTitle = subtask to modify, newSubtaskStatus / newSubtaskTitle.
+
+- "delete_subtask": User wants to DELETE or REMOVE a SUBTASK.
+  Examples: "delete the research subtask from my project", "remove step 3 of the launch task".
+  → title = parent task name, subtaskTitle = subtask to delete.
+
 - "reschedule_tasks": User wants to MOVE an existing task to a new time/date.
   Examples: "move gym to 7 AM", "reschedule my standup to Thursday", "push the meeting to next week", "shift code review to 3 PM tomorrow".
 
@@ -167,9 +197,9 @@ INTENT CLASSIFICATION RULES:
   Examples: "I finished the gym session", "mark ChiefOS task as done", "complete the DSA study", "done with meeting", "check off electricity bill".
   → title = task, newStatus = "Completed".
 
-- "update_task": User wants to UPDATE a specific FIELD on an existing task (not reschedule, not complete).
-  Examples: "bump DSA study to high priority", "change gym category to Health", "add a note to my meeting: bring laptop", "make the standup blue", "set ChiefOS to in progress".
-  → Extract which field changes. Set the appropriate new* field.
+- "update_task": User wants to UPDATE ANY FIELD (title, duration, priority, etc.) of an EXISTING task. NEVER CREATE A NEW TASK FOR EDITS.
+  Examples: "change the duration of my gym task to 2 hours", "rename meeting with Mike to planning session", "bump DSA study to high priority", "change gym category to Health", "add a note to my meeting: bring laptop".
+  → title = EXISTING task name. Extract which field changes. Set the appropriate new* field (e.g. newTitle, newDurationMinutes, newPriority).
 
 - "list_tasks": User wants to SEE / LIST tasks, optionally filtered.
   Examples: "show all my tasks", "list pending tasks", "what are my high priority tasks?", "show all work tasks", "list completed missions", "what tasks do I have this week?".
@@ -193,12 +223,14 @@ INTENT CLASSIFICATION RULES:
 - "unknown": Cannot determine intent.
 
 CRITICAL DISAMBIGUATION RULES:
-1. "I finished X" / "mark X as done" / "completed X" → complete_task (NOT update_task)
-2. "bump priority" / "change category" / "add a note" / "set to in progress" → update_task
-3. "show all tasks" / "list tasks" → list_tasks (NOT get_schedule)
-4. "what's on my schedule today" / "show my calendar" → get_schedule (shows timeline)
-5. "clear schedule" / "free up today" → clear_schedule (unschedule, do NOT delete)
-6. "add subtasks to [task]" → add_subtasks (NEVER create_task)
+1. "change duration of X" / "rename X" / "edit X" → update_task (NEVER create_task)
+2. "I finished X" / "mark X as done" / "completed X" → complete_task
+3. "bump priority" / "change category" / "add a note" / "set to in progress" → update_task
+4. "mark subtask done" / "rename subtask" → update_subtask
+5. "show all tasks" / "list tasks" → list_tasks (NOT get_schedule)
+6. "what's on my schedule today" / "show my calendar" → get_schedule (shows timeline)
+7. "clear schedule" / "free up today" → clear_schedule (unschedule, do NOT delete)
+8. "add subtasks to [task]" → add_subtasks (NEVER create_task)
 7. Confirmations ("yes", "ok", "sure", "lock it in") → conversational
 8. Meeting/event with people → extract attendees. With location → extract location.
 
@@ -255,11 +287,21 @@ You must return a valid JSON object with this EXACT structure (all fields option
 
     // ── Subtasks ──
     "subtasks": ["subtask 1", "subtask 2", ...],  // for add_subtasks intent
+    "subtaskTitle": string,                       // for update_subtask / delete_subtask
+    "newSubtaskStatus": "Pending" | "In Progress" | "Completed", // for update_subtask
+    "newSubtaskTitle": string,                    // for update_subtask
 
     // ── Update fields (for update_task/complete_task) ──
+    "newTitle": string,
+    "newDateIso": "YYYY-MM-DD",
+    "newStartTime": "HH:MM",
+    "newEndTime": "HH:MM",
+    "newDurationMinutes": number,
     "newStatus": "Pending" | "In Progress" | "Completed" | "Cancelled" | "On Hold",
     "newPriority": "Low" | "Medium" | "High",
     "newCategory": string,
+    "newType": "Focus" | "Meeting" | "Break" | "Admin" | "Personal",
+    "newEnergyRequired": "Low" | "Medium" | "High",
     "newNotes": string,
     "newColor": string,
 

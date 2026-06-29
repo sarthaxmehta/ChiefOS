@@ -21,6 +21,12 @@ export class ActionPlanner {
       case 'add_subtasks':
         return await this.handleAddSubtasks(extractedData, userMessage);
 
+      case 'update_subtask':
+        return await this.handleUpdateSubtask(extractedData);
+
+      case 'delete_subtask':
+        return await this.handleDeleteSubtask(extractedData);
+
       case 'delete_task':
         return await this.handleDeleteTask(extractedData);
 
@@ -347,6 +353,98 @@ export class ActionPlanner {
     };
   }
 
+  // ─── Update Subtask ─────────────────────────────────────────────────────────
+
+  private static async handleUpdateSubtask(data: any) {
+    if (!data?.title || !data?.subtaskTitle) {
+      return { type: 'error', message: "I need both the main task name and the subtask name to update it." };
+    }
+
+    const mission = await prisma.mission.findFirst({
+      where: { title: { contains: data.title } },
+      include: { subMissions: true }
+    });
+
+    if (!mission || mission.subMissions.length === 0) {
+      return { type: 'error', message: `I couldn't find any subtasks under "${data.title}".` };
+    }
+
+    // Try finding the exact subtask by name or "step N"
+    let targetSub = mission.subMissions.find(s => s.title.toLowerCase().includes(data.subtaskTitle.toLowerCase()));
+    
+    // If not found by text, try parsing a number if they said "step 1"
+    if (!targetSub) {
+      const match = data.subtaskTitle.match(/\d+/);
+      if (match) {
+        const index = parseInt(match[0], 10) - 1;
+        const sorted = [...mission.subMissions].sort((a, b) => a.order - b.order);
+        if (sorted[index]) targetSub = sorted[index];
+      }
+    }
+
+    if (!targetSub) {
+      return { type: 'error', message: `I couldn't find a subtask matching "${data.subtaskTitle}".` };
+    }
+
+    const updatePayload: any = {};
+    if (data.newSubtaskStatus) updatePayload.status = data.newSubtaskStatus;
+    if (data.newSubtaskTitle) updatePayload.title = data.newSubtaskTitle;
+
+    if (Object.keys(updatePayload).length === 0) {
+      return { type: 'error', message: "I'm not sure what you want to update on this subtask." };
+    }
+
+    const updated = await prisma.subMission.update({
+      where: { id: targetSub.id },
+      data: updatePayload
+    });
+
+    return {
+      type: 'subtask_updated',
+      missionTitle: mission.title,
+      subtask: updated
+    };
+  }
+
+  // ─── Delete Subtask ─────────────────────────────────────────────────────────
+
+  private static async handleDeleteSubtask(data: any) {
+    if (!data?.title || !data?.subtaskTitle) {
+      return { type: 'error', message: "I need both the main task name and the subtask name to delete it." };
+    }
+
+    const mission = await prisma.mission.findFirst({
+      where: { title: { contains: data.title } },
+      include: { subMissions: true }
+    });
+
+    if (!mission || mission.subMissions.length === 0) {
+      return { type: 'error', message: `I couldn't find any subtasks under "${data.title}".` };
+    }
+
+    let targetSub = mission.subMissions.find(s => s.title.toLowerCase().includes(data.subtaskTitle.toLowerCase()));
+    if (!targetSub) {
+      const match = data.subtaskTitle.match(/\d+/);
+      if (match) {
+        const index = parseInt(match[0], 10) - 1;
+        const sorted = [...mission.subMissions].sort((a, b) => a.order - b.order);
+        if (sorted[index]) targetSub = sorted[index];
+      }
+    }
+
+    if (!targetSub) {
+      return { type: 'error', message: `I couldn't find a subtask matching "${data.subtaskTitle}".` };
+    }
+
+    await prisma.subMission.delete({ where: { id: targetSub.id } });
+
+    return {
+      type: 'subtask_deleted',
+      missionTitle: mission.title,
+      subtaskTitle: targetSub.title
+    };
+  }
+
   // ─── Delete Task Handler ────────────────────────────────────────────────────
 
   private static async handleDeleteTask(data: any) {
@@ -409,6 +507,9 @@ export class ActionPlanner {
       }
     });
 
+    const { RecurringEngine } = await import("./recurring-engine");
+    await RecurringEngine.spawnNextOccurrence(mission.id);
+
     // Log activity
     await prisma.missionActivity.create({
       data: {
@@ -422,8 +523,6 @@ export class ActionPlanner {
       mission: updated,
     };
   }
-
-  // ─── Update Task Handler ────────────────────────────────────────────────────
 
   private static async handleUpdateTask(data: any, userMessage?: string) {
     if (!data?.title) {
@@ -441,25 +540,87 @@ export class ActionPlanner {
       };
     }
 
-    // Build update payload — only include fields that changed
+    // Build update payload
     const updatePayload: Record<string, any> = {};
-    if (data.newStatus)    updatePayload.status    = data.newStatus;
-    if (data.newPriority)  updatePayload.priority  = data.newPriority;
-    if (data.newCategory)  updatePayload.category  = data.newCategory;
-    if (data.newNotes)     updatePayload.notes     = data.newNotes;
-    if (data.newColor)     updatePayload.color     = data.newColor;
-    if (data.description)  updatePayload.description = data.description;
-    if (data.context)      updatePayload.context   = data.context;
-    if (data.notes && !data.newNotes) updatePayload.notes = data.notes;
+    
+    // Core fields
+    if (data.newTitle)           updatePayload.title = data.newTitle;
+    if (data.newStatus)          updatePayload.status = data.newStatus;
+    if (data.newPriority)        updatePayload.priority = data.newPriority;
+    if (data.newCategory)        updatePayload.category = data.newCategory;
+    if (data.newType)            updatePayload.type = data.newType;
+    if (data.newEnergyRequired)  updatePayload.energyRequired = data.newEnergyRequired;
+    if (data.newColor)           updatePayload.color = data.newColor;
+    if (data.newNotes)           updatePayload.notes = data.newNotes;
+    if (data.description)        updatePayload.description = data.description;
+    if (data.context)            updatePayload.context = data.context;
+    
+    // Time fields
+    const duration = data.newDurationMinutes || mission.estimatedMinutes || 60;
+    if (data.newDurationMinutes) updatePayload.estimatedMinutes = data.newDurationMinutes;
+    if (data.newDateIso)         updatePayload.date = new Date(data.newDateIso);
 
-    // Recalculate score if priority or energy changed
-    if (data.newPriority) {
-      const newEnergy = mission.energyRequired || "Medium";
-      updatePayload.missionScore = this.computeMissionScore(data.newPriority, newEnergy, mission.type || "Focus");
+    // Recalculate score if priority/energy/type changed
+    if (data.newPriority || data.newEnergyRequired || data.newType) {
+      const p = data.newPriority || mission.priority || "Medium";
+      const e = data.newEnergyRequired || mission.energyRequired || "Medium";
+      const t = data.newType || mission.type || "Focus";
+      updatePayload.missionScore = this.computeMissionScore(p, e, t);
     }
 
-    if (Object.keys(updatePayload).length === 0) {
+    if (Object.keys(updatePayload).length === 0 && !data.newStartTime && !data.newEndTime) {
       return { type: 'error', message: "I couldn't determine what to update. Please specify the field to change." };
+    }
+
+    // ── Schedule Handling (If time/duration/date changed) ──
+    const targetDate = updatePayload.date || mission.date || new Date();
+    let newStart = mission.startTime;
+    let newEnd = mission.endTime;
+    let timeChanged = false;
+
+    if (data.newStartTime) {
+      newStart = new Date(targetDate);
+      const [h, m] = data.newStartTime.split(':').map(Number);
+      newStart.setHours(h, m, 0, 0);
+      
+      if (data.newEndTime) {
+        newEnd = new Date(targetDate);
+        const [eh, em] = data.newEndTime.split(':').map(Number);
+        newEnd.setHours(eh, em, 0, 0);
+      } else {
+        newEnd = new Date(newStart.getTime() + duration * 60000);
+      }
+      timeChanged = true;
+    } else if (data.newDurationMinutes && newStart) {
+      // If only duration changed but we had a start time, adjust the end time
+      newEnd = new Date(newStart.getTime() + duration * 60000);
+      timeChanged = true;
+    } else if (data.newDateIso && newStart) {
+      // Shift existing times to new date
+      newStart = new Date(targetDate);
+      newStart.setHours(mission.startTime!.getHours(), mission.startTime!.getMinutes(), 0, 0);
+      newEnd = new Date(targetDate);
+      newEnd.setHours(mission.endTime!.getHours(), mission.endTime!.getMinutes(), 0, 0);
+      timeChanged = true;
+    }
+
+    if (timeChanged) {
+      updatePayload.startTime = newStart;
+      updatePayload.endTime = newEnd;
+      updatePayload.isAIScheduled = true;
+      
+      // Delete old blocks and create new one
+      await prisma.scheduledBlock.deleteMany({ where: { missionId: mission.id } });
+      await prisma.scheduledBlock.create({
+        data: {
+          title: updatePayload.title || mission.title,
+          startTime: newStart!,
+          endTime: newEnd!,
+          source: "AI",
+          type: updatePayload.type || mission.type || "Focus",
+          missionId: mission.id
+        }
+      });
     }
 
     const updated = await prisma.mission.update({
@@ -480,6 +641,7 @@ export class ActionPlanner {
       type: 'task_updated',
       mission: updated,
       updatedFields: Object.keys(updatePayload),
+      timeChanged
     };
   }
 

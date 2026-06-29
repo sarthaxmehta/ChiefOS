@@ -27,11 +27,17 @@ export async function getExecutionData(dateString: string) {
   return { blocks, unscheduledMissionsCount };
 }
 
+import { RecurringEngine } from "@/lib/ai/recurring-engine";
+
 export async function markMissionDone(missionId: string) {
   await prisma.mission.update({
     where: { id: missionId },
     data: { status: "Completed" }
   });
+  
+  // Check if mission is recurring and spawn next occurrence if so
+  await RecurringEngine.spawnNextOccurrence(missionId);
+  
   revalidatePath("/dashboard");
 }
 
