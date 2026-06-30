@@ -126,7 +126,7 @@ export default function TodayView() {
         {/* AI Panel Slide-In */}
         <AnimatePresence>
           {showAIPanel && (
-            <DashboardAIPanel selectedDate={selectedDate} onClose={() => setShowAIPanel(false)} />
+            <DashboardAIPanel key={format(selectedDate, "yyyy-MM-dd")} selectedDate={selectedDate} onClose={() => setShowAIPanel(false)} />
           )}
         </AnimatePresence>
         

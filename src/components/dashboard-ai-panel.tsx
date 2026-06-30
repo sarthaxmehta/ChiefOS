@@ -2,34 +2,42 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { X, Send, BotMessageSquare, User } from "lucide-react";
+import { X, Send, BotMessageSquare, User, Trash2 } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
+import { format } from "date-fns";
+
 export function DashboardAIPanel({ selectedDate, onClose }: { selectedDate: Date; onClose: () => void }) {
   const [input, setInput] = useState("");
+  const dateKey = format(selectedDate, "yyyy-MM-dd");
+
   const { messages, sendMessage, status, error, setMessages } = useChat({
     transport: new DefaultChatTransport({
       api: `/api/chief/chat?selectedDate=${encodeURIComponent(selectedDate.toISOString())}`
     }),
     messages: []
-  });  // Load chat history on mount
+  });
+
+  // Load chat history on mount
   useEffect(() => {
-    const saved = localStorage.getItem("chief_chat_history");
+    const saved = localStorage.getItem(`chief_chat_history_${dateKey}`);
     if (saved) {
       try {
         setMessages(JSON.parse(saved));
       } catch (e) {
         console.error("Error loading chat history:", e);
       }
+    } else {
+      setMessages([]);
     }
-  }, [setMessages]);
+  }, [dateKey, setMessages]);
 
   // Save chat history on changes
   useEffect(() => {
     if (messages.length > 0) {
-      localStorage.setItem("chief_chat_history", JSON.stringify(messages));
+      localStorage.setItem(`chief_chat_history_${dateKey}`, JSON.stringify(messages));
     }
-  }, [messages]);
+  }, [messages, dateKey]);
 
   const isLoading = status === "submitted" || status === "streaming";
 
@@ -68,9 +76,23 @@ export function DashboardAIPanel({ selectedDate, onClose }: { selectedDate: Date
               <BotMessageSquare className="w-8 h-8 text-primary" />
               <h1 className="text-3xl font-extrabold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-500 dark:from-white dark:to-slate-400">Chief OS</h1>
             </div>
-            <button onClick={onClose} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors">
-              <X className="w-5 h-5 text-slate-500" />
-            </button>
+            <div className="flex items-center gap-1">
+              {messages.length > 0 && (
+                <button 
+                  onClick={() => {
+                    setMessages([]);
+                    localStorage.removeItem(`chief_chat_history_${dateKey}`);
+                  }} 
+                  className="p-2 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/20 rounded-full transition-colors cursor-pointer"
+                  title="Clear conversation"
+                >
+                  <Trash2 className="w-4 h-4 text-slate-500 hover:text-red-500" />
+                </button>
+              )}
+              <button onClick={onClose} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors cursor-pointer">
+                <X className="w-5 h-5 text-slate-500" />
+              </button>
+            </div>
           </div>
         </div>
 
