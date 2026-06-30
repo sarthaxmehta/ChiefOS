@@ -23,11 +23,18 @@ const NAV_ITEMS = [
   { name: "Briefing", href: "/dashboard/briefing", icon: CheckSquare },
 ];
 
-export function NavigationSidebar() {
+interface NavigationSidebarProps {
+  session: any;
+}
+
+export function NavigationSidebar({ session }: NavigationSidebarProps) {
   const pathname = usePathname();
   const [isHovered, setIsHovered] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const sidebarRef = useRef<HTMLElement>(null);
+
+  const userName = session?.user?.name || "Executive";
+  const userImage = session?.user?.image || `https://api.dicebear.com/7.x/notionists/svg?seed=${userName}`;
 
   const handleMouseEnter = () => {
     if (timeoutRef.current) {
@@ -133,7 +140,7 @@ export function NavigationSidebar() {
                   <TooltipTrigger asChild>
                     <div className="w-[56px] flex justify-center shrink-0 z-10 relative cursor-pointer">
                       <Image
-                        src="https://api.dicebear.com/7.x/notionists/svg?seed=Sarthak"
+                        src={userImage}
                         alt="Avatar"
                         width={28}
                         height={28}
@@ -146,7 +153,7 @@ export function NavigationSidebar() {
                     </div>
                   </TooltipTrigger>
                   <TooltipContent side="right" sideOffset={10} className="font-semibold text-xs bg-popover/95 backdrop-blur-sm border-border">
-                    Settings · Sarthak (AI Active)
+                    Settings · {userName} (AI Active)
                   </TooltipContent>
                 </Tooltip>
               ) : (
@@ -154,7 +161,7 @@ export function NavigationSidebar() {
                 <div className="flex items-center w-full px-2.5 z-10 relative cursor-pointer">
                   <div className="relative shrink-0 flex items-center">
                     <Image
-                      src="https://api.dicebear.com/7.x/notionists/svg?seed=Sarthak"
+                      src={userImage}
                       alt="Avatar"
                       width={32}
                       height={32}
@@ -172,7 +179,7 @@ export function NavigationSidebar() {
                     <span className={`font-bold text-[13px] leading-tight truncate transition-colors duration-200 ${
                       pathname === "/dashboard/settings" ? "text-white dark:text-black" : "text-slate-850 dark:text-slate-200"
                     }`}>
-                      Sarthak
+                      {userName}
                     </span>
                     <span className={`text-[8px] font-black tracking-wider uppercase flex items-center gap-1 mt-0.5 transition-colors duration-200 ${
                       pathname === "/dashboard/settings" ? "text-green-300 dark:text-green-700" : "text-green-600 dark:text-green-400"
