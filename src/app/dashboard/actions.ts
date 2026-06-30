@@ -1,18 +1,39 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { startOfDay, endOfDay } from "date-fns";
+import { startOfDay } from "date-fns";
 import { revalidatePath } from "next/cache";
+import { auth } from "@/auth";
+import { RecurringEngine } from "@/lib/ai/recurring-engine";
+
+// Helper to query user preferences / verify identity
+async function getUserId() {
+  const session = await auth();
+  if (!session?.user?.email) throw new Error("Unauthorized");
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email }
+  });
+  if (!user) throw new Error("User not found");
+  return user.id;
+}
+
+// Timezone-independent Date boundaries utility
+function parseDateRangeUTC(dateString: string) {
+  const [y, m, d] = dateString.split("T")[0].split("-").map(Number);
+  const start = new Date(Date.UTC(y, m - 1, d, 0, 0, 0));
+  const end = new Date(Date.UTC(y, m - 1, d, 23, 59, 59, 999));
+  return { start, end };
+}
 
 export async function getExecutionData(dateString: string) {
+  const userId = await getUserId();
   await cleanupPastMissions();
-  const date = new Date(dateString);
-  const start = startOfDay(date);
-  const end = endOfDay(date);
+  const { start, end } = parseDateRangeUTC(dateString);
 
   const blocks = await prisma.scheduledBlock.findMany({
     where: {
-      startTime: { gte: start, lt: end }
+      startTime: { gte: start, lt: end },
+      mission: { userId }
     },
     include: { mission: true },
     orderBy: { startTime: "asc" }
@@ -20,29 +41,38 @@ export async function getExecutionData(dateString: string) {
 
   const unscheduledMissionsCount = await prisma.mission.count({
     where: {
+      userId,
       status: { not: "Completed" },
-      scheduledBlocks: { none: {} } // Has no scheduled blocks at all
+      scheduledBlocks: { none: {} }
     }
   });
 
   return { blocks, unscheduledMissionsCount };
 }
 
-import { RecurringEngine } from "@/lib/ai/recurring-engine";
-
 export async function markMissionDone(missionId: string) {
+  const userId = await getUserId();
+  const mission = await prisma.mission.findFirst({
+    where: { id: missionId, userId }
+  });
+  if (!mission) throw new Error("Mission not found or unauthorized");
+
   await prisma.mission.update({
     where: { id: missionId },
     data: { status: "Completed" }
   });
   
-  // Check if mission is recurring and spawn next occurrence if so
   await RecurringEngine.spawnNextOccurrence(missionId);
-  
   revalidatePath("/dashboard");
 }
 
 export async function startMissionEarly(blockId: string, newStartTime: Date) {
+  const userId = await getUserId();
+  const block = await prisma.scheduledBlock.findFirst({
+    where: { id: blockId, mission: { userId } }
+  });
+  if (!block) throw new Error("Block not found or unauthorized");
+
   await prisma.scheduledBlock.update({
     where: { id: blockId },
     data: { startTime: newStartTime }
@@ -51,9 +81,10 @@ export async function startMissionEarly(blockId: string, newStartTime: Date) {
 }
 
 export async function getFilteredMissions(mode: "unplanned" | "planned" | "all") {
+  const userId = await getUserId();
   if (mode === "unplanned") {
     return prisma.mission.findMany({
-      where: { scheduledBlocks: { none: {} }, status: { not: "Completed" } },
+      where: { userId, scheduledBlocks: { none: {} }, status: { not: "Completed" } },
       include: { subMissions: true },
       orderBy: { createdAt: "desc" }
     });
@@ -61,27 +92,28 @@ export async function getFilteredMissions(mode: "unplanned" | "planned" | "all")
   
   if (mode === "planned") {
     return prisma.mission.findMany({
-      where: { scheduledBlocks: { some: {} } },
+      where: { userId, scheduledBlocks: { some: {} } },
       include: { scheduledBlocks: true, subMissions: true },
       orderBy: { createdAt: "desc" }
     });
   }
 
   return prisma.mission.findMany({
+    where: { userId },
     include: { scheduledBlocks: true, subMissions: true },
     orderBy: { createdAt: "desc" }
   });
 }
 
 export async function getTasksForDate(dateString: string) {
+  const userId = await getUserId();
   await cleanupPastMissions();
-  const date = new Date(dateString);
-  const start = startOfDay(date);
-  const end = endOfDay(date);
+  const { start, end } = parseDateRangeUTC(dateString);
 
   const blocks = await prisma.scheduledBlock.findMany({
     where: {
       startTime: { gte: start, lt: end },
+      mission: { userId }
     },
     include: { mission: { include: { subMissions: true } } },
     orderBy: { startTime: "asc" }
@@ -89,6 +121,7 @@ export async function getTasksForDate(dateString: string) {
 
   const unplannedMissions = await prisma.mission.findMany({
     where: {
+      userId,
       date: { gte: start, lt: end },
       startTime: null,
       endTime: null
@@ -120,23 +153,35 @@ export async function getTasksForDate(dateString: string) {
 }
 
 export async function deleteScheduledTask(blockId: string) {
-  const block = await prisma.scheduledBlock.findUnique({
-    where: { id: blockId }
+  const userId = await getUserId();
+  const block = await prisma.scheduledBlock.findFirst({
+    where: { id: blockId, mission: { userId } }
   });
   if (block) {
     await prisma.scheduledBlock.delete({
       where: { id: blockId }
     });
   } else {
-    await prisma.mission.update({
-      where: { id: blockId },
-      data: { date: null }
+    const mission = await prisma.mission.findFirst({
+      where: { id: blockId, userId }
     });
+    if (mission) {
+      await prisma.mission.update({
+        where: { id: blockId },
+        data: { date: null }
+      });
+    }
   }
   revalidatePath("/dashboard");
 }
 
 export async function updateTaskStatus(missionId: string, status: string) {
+  const userId = await getUserId();
+  const mission = await prisma.mission.findFirst({
+    where: { id: missionId, userId }
+  });
+  if (!mission) throw new Error("Mission not found or unauthorized");
+
   await prisma.mission.update({
     where: { id: missionId },
     data: { status }
@@ -145,6 +190,7 @@ export async function updateTaskStatus(missionId: string, status: string) {
 }
 
 export async function createMission(data: any) {
+  const userId = await getUserId();
   try {
     let startTime: Date | null = null;
     let endTime: Date | null = null;
@@ -179,10 +225,10 @@ export async function createMission(data: any) {
         endTime: endTime,
         tags: data.tags ? JSON.stringify(data.tags) : null,
         status: "Pending",
+        userId,
       }
     });
 
-    // Handle Scheduling
     if (startTime && endTime) {
       await prisma.scheduledBlock.create({
         data: {
@@ -195,7 +241,6 @@ export async function createMission(data: any) {
       });
     }
 
-    // Handle Subtasks
     if (data.subtasks && Array.isArray(data.subtasks) && data.subtasks.length > 0) {
       await Promise.all(
         data.subtasks.map((stTitle: string, idx: number) => 
@@ -219,10 +264,20 @@ export async function createMission(data: any) {
 }
 
 export async function deleteMission(missionId: string) {
+  const userId = await getUserId();
+  const mission = await prisma.mission.findFirst({
+    where: { id: missionId, userId }
+  });
+  if (!mission) throw new Error("Mission not found or unauthorized");
+
   try {
-    await prisma.scheduledBlock.deleteMany({
-      where: { missionId }
-    });
+    await prisma.scheduledBlock.deleteMany({ where: { missionId } });
+    await prisma.subMission.deleteMany({ where: { missionId } });
+    await prisma.missionActivity.deleteMany({ where: { missionId } });
+    await prisma.workSession.deleteMany({ where: { missionId } });
+    await prisma.scheduleSuggestion.deleteMany({ where: { missionId } });
+    await prisma.missionInsight.deleteMany({ where: { missionId } });
+    
     await prisma.mission.delete({
       where: { id: missionId }
     });
@@ -235,6 +290,12 @@ export async function deleteMission(missionId: string) {
 }
 
 export async function rescheduleMission(missionId: string, dateString: string | null) {
+  const userId = await getUserId();
+  const mission = await prisma.mission.findFirst({
+    where: { id: missionId, userId }
+  });
+  if (!mission) throw new Error("Mission not found or unauthorized");
+
   try {
     const dateVal = dateString ? new Date(dateString) : null;
     if (!dateVal) {
@@ -259,6 +320,12 @@ export async function rescheduleMission(missionId: string, dateString: string | 
 }
 
 export async function updateMission(missionId: string, data: any) {
+  const userId = await getUserId();
+  const originalMission = await prisma.mission.findFirst({
+    where: { id: missionId, userId }
+  });
+  if (!originalMission) throw new Error("Mission not found or unauthorized");
+
   try {
     let startTime: Date | null = null;
     let endTime: Date | null = null;
@@ -340,6 +407,12 @@ export async function updateMission(missionId: string, data: any) {
 }
 
 export async function toggleSubTaskStatus(subTaskId: string, newStatus: string) {
+  const userId = await getUserId();
+  const subTask = await prisma.subMission.findFirst({
+    where: { id: subTaskId, mission: { userId } }
+  });
+  if (!subTask) throw new Error("Subtask not found or unauthorized");
+
   try {
     const sub = await prisma.subMission.update({
       where: { id: subTaskId },
@@ -353,8 +426,6 @@ export async function toggleSubTaskStatus(subTaskId: string, newStatus: string) 
     throw new Error(error.message || "Database error toggling subtask status");
   }
 }
-
-import { auth } from "@/auth";
 
 export async function getUserPreferences() {
   const session = await auth();
@@ -443,10 +514,13 @@ export async function updateUserPreferences(data: {
 }
 
 export async function cleanupPastMissions() {
+  const userId = await getUserId().catch(() => null);
+  if (!userId) return;
   const todayStart = startOfDay(new Date());
 
   const pastIncompleteMissions = await prisma.mission.findMany({
     where: {
+      userId,
       date: { lt: todayStart },
       status: { not: "Completed" }
     }
@@ -473,5 +547,3 @@ export async function cleanupPastMissions() {
     revalidatePath("/dashboard/missions");
   }
 }
-
-

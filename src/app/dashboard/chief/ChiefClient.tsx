@@ -32,9 +32,10 @@ import { format, isToday, isYesterday, parseISO } from "date-fns";
 
 interface ChiefClientProps {
   initialUserName: string;
+  userEmail: string;
 }
 
-export function ChiefClient({ initialUserName }: ChiefClientProps) {
+export function ChiefClient({ initialUserName, userEmail }: ChiefClientProps) {
   const [userName] = useState(initialUserName);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showHistorySidebar, setShowHistorySidebar] = useState(false);
@@ -46,11 +47,12 @@ export function ChiefClient({ initialUserName }: ChiefClientProps) {
   // Load list of dates with active chat history from localStorage
   const loadHistoryKeys = useCallback(() => {
     if (typeof window === "undefined") return;
+    const prefix = `chief_chat_history_${userEmail}_`;
     const keys: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && key.startsWith("chief_chat_history_")) {
-        const dateStr = key.replace("chief_chat_history_", "");
+      if (key && key.startsWith(prefix)) {
+        const dateStr = key.replace(prefix, "");
         keys.push(dateStr);
       }
     }
@@ -63,7 +65,7 @@ export function ChiefClient({ initialUserName }: ChiefClientProps) {
       }
       return keys;
     });
-  }, []);
+  }, [userEmail]);
 
   useEffect(() => {
     loadHistoryKeys();
@@ -72,7 +74,7 @@ export function ChiefClient({ initialUserName }: ChiefClientProps) {
   const handleDeleteHistory = (e: React.MouseEvent, targetDateKey: string) => {
     e.stopPropagation();
     if (typeof window === "undefined") return;
-    localStorage.removeItem(`chief_chat_history_${targetDateKey}`);
+    localStorage.removeItem(`chief_chat_history_${userEmail}_${targetDateKey}`);
     toast.success(`Chat history for ${targetDateKey} cleared.`);
     loadHistoryKeys();
     
@@ -133,6 +135,7 @@ export function ChiefClient({ initialUserName }: ChiefClientProps) {
           key={dateKey}
           selectedDate={selectedDate}
           userName={userName}
+          userEmail={userEmail}
           onHistoryRefresh={loadHistoryKeys}
         />
       </div>
@@ -233,10 +236,11 @@ export function ChiefClient({ initialUserName }: ChiefClientProps) {
 interface ChiefChatAreaProps {
   selectedDate: Date;
   userName: string;
+  userEmail: string;
   onHistoryRefresh: () => void;
 }
 
-function ChiefChatArea({ selectedDate, userName, onHistoryRefresh }: ChiefChatAreaProps) {
+function ChiefChatArea({ selectedDate, userName, userEmail, onHistoryRefresh }: ChiefChatAreaProps) {
   const [greeting, setGreeting] = useState("Good afternoon");
   const [displayedGreeting, setDisplayedGreeting] = useState("");
   const [showCursor, setShowCursor] = useState(true);
@@ -260,7 +264,7 @@ function ChiefChatArea({ selectedDate, userName, onHistoryRefresh }: ChiefChatAr
 
   // Load chat log from localStorage for the active date on mount
   useEffect(() => {
-    const saved = localStorage.getItem(`chief_chat_history_${dateKey}`);
+    const saved = localStorage.getItem(`chief_chat_history_${userEmail}_${dateKey}`);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -275,15 +279,15 @@ function ChiefChatArea({ selectedDate, userName, onHistoryRefresh }: ChiefChatAr
       setMessages([]);
       setChatState("greeting");
     }
-  }, [dateKey, setMessages]);
+  }, [dateKey, userEmail, setMessages]);
 
   // Save chat log to localStorage whenever messages mutate
   useEffect(() => {
     if (messages.length > 0) {
-      localStorage.setItem(`chief_chat_history_${dateKey}`, JSON.stringify(messages));
+      localStorage.setItem(`chief_chat_history_${userEmail}_${dateKey}`, JSON.stringify(messages));
       onHistoryRefresh();
     }
-  }, [messages, dateKey, onHistoryRefresh]);
+  }, [messages, dateKey, userEmail, onHistoryRefresh]);
 
   // Time-aware Greeting Typing effect
   useEffect(() => {

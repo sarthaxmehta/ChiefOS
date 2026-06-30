@@ -7,7 +7,7 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { format } from "date-fns";
 
-export function DashboardAIPanel({ selectedDate, onClose }: { selectedDate: Date; onClose: () => void }) {
+export function DashboardAIPanel({ selectedDate, userEmail, onClose }: { selectedDate: Date; userEmail: string; onClose: () => void }) {
   const [input, setInput] = useState("");
   const dateKey = format(selectedDate, "yyyy-MM-dd");
 
@@ -20,7 +20,7 @@ export function DashboardAIPanel({ selectedDate, onClose }: { selectedDate: Date
 
   // Load chat history on mount
   useEffect(() => {
-    const saved = localStorage.getItem(`chief_chat_history_${dateKey}`);
+    const saved = localStorage.getItem(`chief_chat_history_${userEmail}_${dateKey}`);
     if (saved) {
       try {
         setMessages(JSON.parse(saved));
@@ -30,14 +30,14 @@ export function DashboardAIPanel({ selectedDate, onClose }: { selectedDate: Date
     } else {
       setMessages([]);
     }
-  }, [dateKey, setMessages]);
+  }, [dateKey, userEmail, setMessages]);
 
   // Save chat history on changes
   useEffect(() => {
     if (messages.length > 0) {
-      localStorage.setItem(`chief_chat_history_${dateKey}`, JSON.stringify(messages));
+      localStorage.setItem(`chief_chat_history_${userEmail}_${dateKey}`, JSON.stringify(messages));
     }
-  }, [messages, dateKey]);
+  }, [messages, dateKey, userEmail]);
 
   const isLoading = status === "submitted" || status === "streaming";
 
@@ -81,7 +81,7 @@ export function DashboardAIPanel({ selectedDate, onClose }: { selectedDate: Date
                 <button 
                   onClick={() => {
                     setMessages([]);
-                    localStorage.removeItem(`chief_chat_history_${dateKey}`);
+                    localStorage.removeItem(`chief_chat_history_${userEmail}_${dateKey}`);
                   }} 
                   className="p-2 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/20 rounded-full transition-colors cursor-pointer"
                   title="Clear conversation"

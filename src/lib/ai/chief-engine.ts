@@ -31,14 +31,18 @@ export class ChiefEngine {
     // Resolve user preferences
     const session = await auth();
     let userPreferencesText = "";
+    let userId: string | undefined;
     if (session?.user?.email) {
       const userWithPref = await prisma.user.findUnique({
         where: { email: session.user.email },
         include: { preferences: true }
       });
-      if (userWithPref?.preferences) {
-        const pref = userWithPref.preferences;
-        userPreferencesText = `User Working Hours: ${pref.workDayStart}:00 to ${pref.workDayEnd}:00. Preferred Focus Window: ${pref.preferredFocusWindow}.`;
+      if (userWithPref) {
+        userId = userWithPref.id;
+        if (userWithPref.preferences) {
+          const pref = userWithPref.preferences;
+          userPreferencesText = `User Working Hours: ${pref.workDayStart}:00 to ${pref.workDayEnd}:00. Preferred Focus Window: ${pref.preferredFocusWindow}.`;
+        }
       }
     }
 
@@ -54,7 +58,7 @@ export class ChiefEngine {
       console.log("[ChiefEngine] Parsed Intent:", JSON.stringify(intent, null, 2));
 
       // 2. Action Planner (Deterministic Execution & Data Gathering)
-      actionResult = await ActionPlanner.executeIntent(intent, selectedDateIso, userMessage);
+      actionResult = await ActionPlanner.executeIntent(intent, selectedDateIso, userMessage, userId);
     }
     console.log("[ChiefEngine] Action Result Type:", actionResult.type);
 

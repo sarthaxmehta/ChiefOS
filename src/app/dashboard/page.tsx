@@ -12,6 +12,8 @@ import { format, isToday } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { BotMessageSquare } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { getUserPreferences } from "@/app/dashboard/actions";
+import { useEffect } from "react";
 
 export type FilterMode = "date" | "unplanned" | "planned" | "all";
 
@@ -21,6 +23,13 @@ export default function TodayView() {
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [showTaskDrawer, setShowTaskDrawer] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<any>(null);
+  const [userEmail, setUserEmail] = useState<string>("anonymous");
+
+  useEffect(() => {
+    getUserPreferences()
+      .then((pref) => setUserEmail(pref.email))
+      .catch((err) => console.error("Failed to load user preferences", err));
+  }, []);
 
   useHotkeys('meta+n, ctrl+n', (e) => {
     e.preventDefault();
@@ -126,7 +135,7 @@ export default function TodayView() {
         {/* AI Panel Slide-In */}
         <AnimatePresence>
           {showAIPanel && (
-            <DashboardAIPanel key={format(selectedDate, "yyyy-MM-dd")} selectedDate={selectedDate} onClose={() => setShowAIPanel(false)} />
+            <DashboardAIPanel key={format(selectedDate, "yyyy-MM-dd")} selectedDate={selectedDate} userEmail={userEmail} onClose={() => setShowAIPanel(false)} />
           )}
         </AnimatePresence>
         

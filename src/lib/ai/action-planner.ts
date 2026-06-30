@@ -11,48 +11,48 @@ export class ActionPlanner {
    * The AI extraction feeds directly into the prisma Mission model.
    * Any field the AI didn't extract gets a sensible default.
    */
-  static async executeIntent(intentData: ParsedIntent, referenceDateIso?: string, userMessage?: string) {
+  static async executeIntent(intentData: ParsedIntent, referenceDateIso?: string, userMessage?: string, userId?: string) {
     const { intent, extractedData } = intentData;
 
     switch (intent) {
       case 'create_task':
-        return await this.handleCreateTask(extractedData, referenceDateIso, userMessage);
+        return await this.handleCreateTask(extractedData, referenceDateIso, userMessage, userId);
 
       case 'add_subtasks':
-        return await this.handleAddSubtasks(extractedData, userMessage);
+        return await this.handleAddSubtasks(extractedData, userMessage, userId);
 
       case 'update_subtask':
-        return await this.handleUpdateSubtask(extractedData);
+        return await this.handleUpdateSubtask(extractedData, userId);
 
       case 'delete_subtask':
-        return await this.handleDeleteSubtask(extractedData);
+        return await this.handleDeleteSubtask(extractedData, userId);
 
       case 'delete_task':
-        return await this.handleDeleteTask(extractedData);
+        return await this.handleDeleteTask(extractedData, userId);
 
       case 'task_decomposition':
         return await this.handleTaskDecomposition(extractedData);
 
       case 'get_schedule':
-        return await this.handleGetSchedule(extractedData, referenceDateIso);
+        return await this.handleGetSchedule(extractedData, referenceDateIso, userId);
 
       case 'reschedule_tasks':
-        return await this.handleRescheduleTasks(extractedData, referenceDateIso);
+        return await this.handleRescheduleTasks(extractedData, referenceDateIso, userId);
 
       case 'complete_task':
-        return await this.handleCompleteTask(extractedData, userMessage);
+        return await this.handleCompleteTask(extractedData, userMessage, userId);
 
       case 'update_task':
-        return await this.handleUpdateTask(extractedData, userMessage);
+        return await this.handleUpdateTask(extractedData, userMessage, userId);
 
       case 'list_tasks':
-        return await this.handleListTasks(extractedData, referenceDateIso);
+        return await this.handleListTasks(extractedData, referenceDateIso, userId);
 
       case 'clear_schedule':
-        return await this.handleClearSchedule(extractedData, referenceDateIso);
+        return await this.handleClearSchedule(extractedData, referenceDateIso, userId);
 
       case 'report_status':
-        return await this.handleReportStatus();
+        return await this.handleReportStatus(userId);
 
       case 'conversational':
         return {
@@ -139,17 +139,15 @@ export class ActionPlanner {
 
   // ─── Create Task Handler ────────────────────────────────────────────────────
 
-  private static async handleCreateTask(data: any, referenceDateIso?: string, userMessage?: string) {
+  private static async handleCreateTask(data: any, referenceDateIso?: string, userMessage?: string, userId?: string) {
     if (!data || !data.title) {
       return { type: 'error', message: "I need a task title to create a task." };
     }
 
-    // Resolve date
     const targetDate = data.targetDateIso
       ? new Date(data.targetDateIso)
       : (referenceDateIso ? new Date(referenceDateIso) : new Date());
 
-    // Infer all schema fields
     const recurringRule = this.inferRecurringRule(data, userMessage);
     const category = this.inferCategory(data);
     const type = this.inferType(data);
@@ -159,7 +157,6 @@ export class ActionPlanner {
     const duration = data.durationMinutes || 60;
     const missionScore = this.computeMissionScore(priority, energyRequired, type);
 
-    // Create the Mission with ALL schema fields populated
     const mission = await prisma.mission.create({
       data: {
         title: data.title,
@@ -178,10 +175,10 @@ export class ActionPlanner {
         recurringRule,
         missionScore,
         isAIScheduled: false,
+        userId: userId || null
       }
     });
 
-    // Write CalendarEvent if meeting (with attendees / location)
     if (type === "Meeting" || data.attendees || data.location) {
       if (data.startTimeString) {
         const evStart = new Date(targetDate);
@@ -205,13 +202,11 @@ export class ActionPlanner {
       }
     }
 
-    // ─── Scheduling Logic ───
     let schedulingOptions: any[] = [];
     let scheduledBlock = null;
     const userSpecifiedTime = !!data.startTimeString;
 
     if (data.startTimeString) {
-      // User specified an exact time — schedule at that time
       const startTime = new Date(targetDate);
       const [hours, minutes] = data.startTimeString.split(':').map(Number);
       startTime.setHours(hours, minutes, 0, 0);
@@ -237,15 +232,12 @@ export class ActionPlanner {
       });
       schedulingOptions = [{ start: startTime, end: endTime }];
 
-      // Sync times to Mission record
       await prisma.mission.update({
         where: { id: mission.id },
         data: { startTime, endTime, isAIScheduled: true }
       });
 
     } else if (!recurringRule || recurringRule === "One-time") {
-      // No specific time, not recurring → auto-schedule in first available slot
-      // Honour preferredTime when finding slots
       schedulingOptions = await SchedulingEngine.findAvailableSlots(
         duration, targetDate, "default", data.preferredTime
       );
@@ -270,7 +262,6 @@ export class ActionPlanner {
         });
       }
     }
-    // For recurring tasks without specific time: just create the mission with the recurrence rule.
 
     return {
       type: 'task_created',
@@ -286,7 +277,7 @@ export class ActionPlanner {
 
   // ─── Add Subtasks to Existing Task ─────────────────────────────────────────
 
-  private static async handleAddSubtasks(data: any, userMessage?: string) {
+  private static async handleAddSubtasks(data: any, userMessage?: string, userId?: string) {
     if (!data?.title) {
       return { type: 'error', message: "I need the task name to add subtasks to." };
     }
@@ -294,9 +285,8 @@ export class ActionPlanner {
       return { type: 'error', message: "I need the subtask names to add." };
     }
 
-    // Find the existing mission by title (partial, case-insensitive)
     const mission = await prisma.mission.findFirst({
-      where: { title: { contains: data.title } },
+      where: { title: { contains: data.title }, userId: userId || null },
       include: { subMissions: true }
     });
 
@@ -307,7 +297,6 @@ export class ActionPlanner {
       };
     }
 
-    // Add each subtask with enriched fields
     const created = [];
     const startOrder = mission.subMissions.length;
     const totalSubs = data.subtasks.length;
@@ -319,7 +308,6 @@ export class ActionPlanner {
       const subTitle = data.subtasks[i];
       const subText = subTitle.toLowerCase();
 
-      // Infer per-subtask difficulty & energy from keywords
       let difficulty = "Medium";
       let energyLevel = "Medium";
       if (/\b(research|write|code|design|build|implement|architect|debug)\b/.test(subText)) {
@@ -337,7 +325,7 @@ export class ActionPlanner {
           description: null,
           estimatedMinutes: perSubMinutes,
           order: startOrder + i,
-          priority: i === 0 ? 'High' : 'Medium', // First step gets priority bump
+          priority: i === 0 ? 'High' : 'Medium',
           energyLevel,
           difficulty,
         }
@@ -355,13 +343,13 @@ export class ActionPlanner {
 
   // ─── Update Subtask ─────────────────────────────────────────────────────────
 
-  private static async handleUpdateSubtask(data: any) {
+  private static async handleUpdateSubtask(data: any, userId?: string) {
     if (!data?.title || !data?.subtaskTitle) {
       return { type: 'error', message: "I need both the main task name and the subtask name to update it." };
     }
 
     const mission = await prisma.mission.findFirst({
-      where: { title: { contains: data.title } },
+      where: { title: { contains: data.title }, userId: userId || null },
       include: { subMissions: true }
     });
 
@@ -369,10 +357,8 @@ export class ActionPlanner {
       return { type: 'error', message: `I couldn't find any subtasks under "${data.title}".` };
     }
 
-    // Try finding the exact subtask by name or "step N"
     let targetSub = mission.subMissions.find(s => s.title.toLowerCase().includes(data.subtaskTitle.toLowerCase()));
     
-    // If not found by text, try parsing a number if they said "step 1"
     if (!targetSub) {
       const match = data.subtaskTitle.match(/\d+/);
       if (match) {
@@ -408,13 +394,13 @@ export class ActionPlanner {
 
   // ─── Delete Subtask ─────────────────────────────────────────────────────────
 
-  private static async handleDeleteSubtask(data: any) {
+  private static async handleDeleteSubtask(data: any, userId?: string) {
     if (!data?.title || !data?.subtaskTitle) {
       return { type: 'error', message: "I need both the main task name and the subtask name to delete it." };
     }
 
     const mission = await prisma.mission.findFirst({
-      where: { title: { contains: data.title } },
+      where: { title: { contains: data.title }, userId: userId || null },
       include: { subMissions: true }
     });
 
@@ -447,14 +433,13 @@ export class ActionPlanner {
 
   // ─── Delete Task Handler ────────────────────────────────────────────────────
 
-  private static async handleDeleteTask(data: any) {
+  private static async handleDeleteTask(data: any, userId?: string) {
     if (!data?.title) {
       return { type: 'error', message: "I need the task name to delete." };
     }
 
-    // Find all matching missions (handles "delete all Mike tasks" type requests)
     const missions = await prisma.mission.findMany({
-      where: { title: { contains: data.title } }
+      where: { title: { contains: data.title }, userId: userId || null }
     });
 
     if (missions.length === 0) {
@@ -471,6 +456,7 @@ export class ActionPlanner {
       await prisma.missionActivity.deleteMany({ where: { missionId: mission.id } });
       await prisma.workSession.deleteMany({ where: { missionId: mission.id } });
       await prisma.scheduleSuggestion.deleteMany({ where: { missionId: mission.id } });
+      await prisma.missionInsight.deleteMany({ where: { missionId: mission.id } });
       await prisma.mission.delete({ where: { id: mission.id } });
       deleted.push({ id: mission.id, title: mission.title });
     }
@@ -484,13 +470,13 @@ export class ActionPlanner {
 
   // ─── Complete Task Handler ──────────────────────────────────────────────────
 
-  private static async handleCompleteTask(data: any, userMessage?: string) {
+  private static async handleCompleteTask(data: any, userMessage?: string, userId?: string) {
     if (!data?.title) {
       return { type: 'error', message: "I need the task name to mark as complete." };
     }
 
     const mission = await prisma.mission.findFirst({
-      where: { title: { contains: data.title } }
+      where: { title: { contains: data.title }, userId: userId || null }
     });
 
     if (!mission) {
@@ -510,7 +496,6 @@ export class ActionPlanner {
     const { RecurringEngine } = await import("./recurring-engine");
     await RecurringEngine.spawnNextOccurrence(mission.id);
 
-    // Log activity
     await prisma.missionActivity.create({
       data: {
         missionId: mission.id,
@@ -524,13 +509,15 @@ export class ActionPlanner {
     };
   }
 
-  private static async handleUpdateTask(data: any, userMessage?: string) {
+  // ─── Update Task Handler ────────────────────────────────────────────────────
+
+  private static async handleUpdateTask(data: any, userMessage?: string, userId?: string) {
     if (!data?.title) {
       return { type: 'error', message: "I need the task name to update." };
     }
 
     const mission = await prisma.mission.findFirst({
-      where: { title: { contains: data.title } }
+      where: { title: { contains: data.title }, userId: userId || null }
     });
 
     if (!mission) {
@@ -540,10 +527,8 @@ export class ActionPlanner {
       };
     }
 
-    // Build update payload
     const updatePayload: Record<string, any> = {};
     
-    // Core fields
     if (data.newTitle)           updatePayload.title = data.newTitle;
     if (data.newStatus)          updatePayload.status = data.newStatus;
     if (data.newPriority)        updatePayload.priority = data.newPriority;
@@ -555,12 +540,10 @@ export class ActionPlanner {
     if (data.description)        updatePayload.description = data.description;
     if (data.context)            updatePayload.context = data.context;
     
-    // Time fields
     const duration = data.newDurationMinutes || mission.estimatedMinutes || 60;
     if (data.newDurationMinutes) updatePayload.estimatedMinutes = data.newDurationMinutes;
     if (data.newDateIso)         updatePayload.date = new Date(data.newDateIso);
 
-    // Recalculate score if priority/energy/type changed
     if (data.newPriority || data.newEnergyRequired || data.newType) {
       const p = data.newPriority || mission.priority || "Medium";
       const e = data.newEnergyRequired || mission.energyRequired || "Medium";
@@ -572,7 +555,6 @@ export class ActionPlanner {
       return { type: 'error', message: "I couldn't determine what to update. Please specify the field to change." };
     }
 
-    // ── Schedule Handling (If time/duration/date changed) ──
     const targetDate = updatePayload.date || mission.date || new Date();
     let newStart = mission.startTime;
     let newEnd = mission.endTime;
@@ -592,11 +574,9 @@ export class ActionPlanner {
       }
       timeChanged = true;
     } else if (data.newDurationMinutes && newStart) {
-      // If only duration changed but we had a start time, adjust the end time
       newEnd = new Date(newStart.getTime() + duration * 60000);
       timeChanged = true;
     } else if (data.newDateIso && newStart) {
-      // Shift existing times to new date
       newStart = new Date(targetDate);
       newStart.setHours(mission.startTime!.getHours(), mission.startTime!.getMinutes(), 0, 0);
       newEnd = new Date(targetDate);
@@ -609,7 +589,6 @@ export class ActionPlanner {
       updatePayload.endTime = newEnd;
       updatePayload.isAIScheduled = true;
       
-      // Delete old blocks and create new one
       await prisma.scheduledBlock.deleteMany({ where: { missionId: mission.id } });
       await prisma.scheduledBlock.create({
         data: {
@@ -628,7 +607,6 @@ export class ActionPlanner {
       data: updatePayload,
     });
 
-    // Log activity
     const changedFields = Object.keys(updatePayload).join(", ");
     await prisma.missionActivity.create({
       data: {
@@ -647,18 +625,17 @@ export class ActionPlanner {
 
   // ─── List Tasks Handler ─────────────────────────────────────────────────────
 
-  private static async handleListTasks(data: any, referenceDateIso?: string) {
-    const where: Record<string, any> = {};
+  private static async handleListTasks(data: any, referenceDateIso?: string, userId?: string) {
+    const where: Record<string, any> = { userId: userId || null };
 
     if (data?.filterStatus)   where.status   = data.filterStatus;
     if (data?.filterPriority) where.priority  = data.filterPriority;
     if (data?.filterCategory) where.category = { contains: data.filterCategory };
 
-    // If a date is specified, filter to that day
     if (data?.targetDateIso) {
-      const targetDate = new Date(data.targetDateIso);
-      const start = new Date(targetDate); start.setHours(0, 0, 0, 0);
-      const end   = new Date(targetDate); end.setHours(23, 59, 59, 999);
+      const [y, m, d] = data.targetDateIso.split("T")[0].split("-").map(Number);
+      const start = new Date(Date.UTC(y, m - 1, d, 0, 0, 0));
+      const end = new Date(Date.UTC(y, m - 1, d, 23, 59, 59, 999));
       where.date = { gte: start, lte: end };
     }
 
@@ -683,29 +660,29 @@ export class ActionPlanner {
 
   // ─── Clear Schedule Handler ──────────────────────────────────────────────────
 
-  private static async handleClearSchedule(data: any, referenceDateIso?: string) {
+  private static async handleClearSchedule(data: any, referenceDateIso?: string, userId?: string) {
     const targetDate = data?.targetDateIso
       ? new Date(data.targetDateIso)
       : (referenceDateIso ? new Date(referenceDateIso) : new Date());
 
-    const startOfTarget = new Date(targetDate); startOfTarget.setHours(0, 0, 0, 0);
-    const endOfTarget   = new Date(targetDate); endOfTarget.setHours(23, 59, 59, 999);
+    const [y, m, d] = targetDate.toISOString().split('T')[0].split('-').map(Number);
+    const startOfTarget = new Date(Date.UTC(y, m - 1, d, 0, 0, 0));
+    const endOfTarget   = new Date(Date.UTC(y, m - 1, d, 23, 59, 59, 999));
 
-    // Find all scheduled blocks for that day
     const blocks = await prisma.scheduledBlock.findMany({
       where: {
-        startTime: { gte: startOfTarget, lte: endOfTarget }
+        startTime: { gte: startOfTarget, lte: endOfTarget },
+        mission: { userId: userId || null }
       }
     });
 
-    // Remove all scheduled blocks for that day
+    const blockIds = blocks.map(b => b.id);
     const { count } = await prisma.scheduledBlock.deleteMany({
       where: {
-        startTime: { gte: startOfTarget, lte: endOfTarget }
+        id: { in: blockIds }
       }
     });
 
-    // Unset startTime/endTime/isAIScheduled on affected missions
     const missionIds = [...new Set(blocks.map(b => b.missionId).filter(Boolean))] as string[];
     if (missionIds.length > 0) {
       await prisma.mission.updateMany({
@@ -741,16 +718,18 @@ export class ActionPlanner {
 
   // ─── Get Schedule Handler ───────────────────────────────────────────────────
 
-  private static async handleGetSchedule(data: any, referenceDateIso?: string) {
+  private static async handleGetSchedule(data: any, referenceDateIso?: string, userId?: string) {
     const targetDate = data?.targetDateIso
       ? new Date(data.targetDateIso)
       : (referenceDateIso ? new Date(referenceDateIso) : new Date());
 
-    const startOfTarget = new Date(targetDate); startOfTarget.setHours(0, 0, 0, 0);
-    const endOfTarget   = new Date(targetDate); endOfTarget.setHours(23, 59, 59, 999);
+    const [y, m, d] = targetDate.toISOString().split('T')[0].split('-').map(Number);
+    const startOfTarget = new Date(Date.UTC(y, m - 1, d, 0, 0, 0));
+    const endOfTarget   = new Date(Date.UTC(y, m - 1, d, 23, 59, 59, 999));
 
     const missions = await prisma.mission.findMany({
       where: {
+        userId: userId || null,
         date: { gte: startOfTarget, lte: endOfTarget }
       },
       orderBy: { startTime: 'asc' }
@@ -758,7 +737,8 @@ export class ActionPlanner {
 
     const blocks = await prisma.scheduledBlock.findMany({
       where: {
-        startTime: { gte: startOfTarget, lte: endOfTarget }
+        startTime: { gte: startOfTarget, lte: endOfTarget },
+        mission: { userId: userId || null }
       },
       orderBy: { startTime: 'asc' }
     });
@@ -773,7 +753,7 @@ export class ActionPlanner {
 
   // ─── Reschedule Tasks Handler ───────────────────────────────────────────────
 
-  private static async handleRescheduleTasks(data: any, referenceDateIso?: string) {
+  private static async handleRescheduleTasks(data: any, referenceDateIso?: string, userId?: string) {
     if (!data || !data.title) {
       return { type: 'error', message: "I need a task title to reschedule." };
     }
@@ -783,7 +763,7 @@ export class ActionPlanner {
       : (referenceDateIso ? new Date(referenceDateIso) : new Date());
 
     const mission = await prisma.mission.findFirst({
-      where: { title: { contains: data.title } }
+      where: { title: { contains: data.title }, userId: userId || null }
     });
 
     if (!mission) {
@@ -833,7 +813,6 @@ export class ActionPlanner {
       };
     }
 
-    // No specific time → find available slot on the new date (honour preferredTime)
     const slots = await SchedulingEngine.findAvailableSlots(
       duration, targetDate, "default", mission.preferredTime || undefined
     );
@@ -870,7 +849,6 @@ export class ActionPlanner {
       };
     }
 
-    // No slots available
     await prisma.mission.update({
       where: { id: mission.id },
       data: { date: targetDate, startTime: null, endTime: null }
@@ -887,25 +865,25 @@ export class ActionPlanner {
 
   // ─── Report Status Handler ──────────────────────────────────────────────────
 
-  private static async handleReportStatus() {
+  private static async handleReportStatus(userId?: string) {
     const now = new Date();
     const startOfToday = new Date(now); startOfToday.setHours(0, 0, 0, 0);
     const endOfToday   = new Date(now); endOfToday.setHours(23, 59, 59, 999);
 
     const pendingMissions = await prisma.mission.findMany({
-      where: { status: "Pending" }
+      where: { status: "Pending", userId: userId || null }
     });
 
     const inProgressMissions = await prisma.mission.findMany({
-      where: { status: "In Progress" }
+      where: { status: "In Progress", userId: userId || null }
     });
 
     const completedMissions = await prisma.mission.findMany({
-      where: { status: "Completed" }
+      where: { status: "Completed", userId: userId || null }
     });
 
     const todaysMissions = await prisma.mission.findMany({
-      where: { date: { gte: startOfToday, lte: endOfToday } }
+      where: { date: { gte: startOfToday, lte: endOfToday }, userId: userId || null }
     });
 
     const totalEstimatedMinutes = pendingMissions.reduce((acc, m) => acc + (m.estimatedMinutes || 60), 0);
