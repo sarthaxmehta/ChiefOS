@@ -351,3 +351,92 @@ export async function toggleSubTaskStatus(subTaskId: string, newStatus: string) 
     throw new Error(error.message || "Database error toggling subtask status");
   }
 }
+
+import { auth } from "@/auth";
+
+export async function getUserPreferences() {
+  const session = await auth();
+  if (!session?.user?.email) throw new Error("Unauthorized");
+
+  const email = session.user.email;
+
+  let user = await prisma.user.findUnique({
+    where: { email },
+    include: { preferences: true }
+  });
+
+  if (!user) {
+    user = await prisma.user.create({
+      data: {
+        email,
+        name: session.user.name,
+        image: session.user.image,
+      },
+      include: { preferences: true }
+    });
+  }
+
+  let preferences = user.preferences;
+  if (!preferences) {
+    preferences = await prisma.userPreferences.create({
+      data: {
+        userId: user.id,
+        workDayStart: 9,
+        workDayEnd: 18,
+        preferredFocusWindow: "Morning"
+      }
+    });
+  }
+
+  return {
+    name: user.name || "",
+    email: user.email || "",
+    image: user.image || "",
+    workDayStart: preferences.workDayStart,
+    workDayEnd: preferences.workDayEnd,
+    preferredFocusWindow: preferences.preferredFocusWindow,
+  };
+}
+
+export async function updateUserPreferences(data: {
+  name: string;
+  workDayStart: number;
+  workDayEnd: number;
+  preferredFocusWindow: string;
+}) {
+  const session = await auth();
+  if (!session?.user?.email) throw new Error("Unauthorized");
+
+  const email = session.user.email;
+
+  const user = await prisma.user.findUnique({
+    where: { email }
+  });
+
+  if (!user) throw new Error("User not found");
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      name: data.name,
+      preferences: {
+        upsert: {
+          create: {
+            workDayStart: data.workDayStart,
+            workDayEnd: data.workDayEnd,
+            preferredFocusWindow: data.preferredFocusWindow
+          },
+          update: {
+            workDayStart: data.workDayStart,
+            workDayEnd: data.workDayEnd,
+            preferredFocusWindow: data.preferredFocusWindow
+          }
+        }
+      }
+    }
+  });
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/settings");
+}
+
