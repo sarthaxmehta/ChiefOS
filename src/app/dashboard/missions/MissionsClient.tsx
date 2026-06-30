@@ -48,13 +48,39 @@ interface MissionsClientProps {
   initialMissions: Mission[];
 }
 
-const COLOR_MAP: Record<string, string> = {
-  Red: "border-l-red-500 dark:border-l-red-500/80",
-  Blue: "border-l-blue-500 dark:border-l-blue-500/80",
-  Green: "border-l-emerald-500 dark:border-l-emerald-500/80",
-  Purple: "border-l-purple-500 dark:border-l-purple-500/80",
-  Yellow: "border-l-amber-500 dark:border-l-amber-500/80",
-  Orange: "border-l-orange-500 dark:border-l-orange-500/80",
+const COLOR_MAP: Record<string, { border: string, bg: string, text: string, badge: string }> = {
+  Red:    { border: "border-l-red-500",    bg: "bg-red-500/[0.02] dark:bg-red-500/[0.03] hover:bg-red-500/[0.04]",    text: "text-red-700 dark:text-red-300",    badge: "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/20" },
+  Blue:   { border: "border-l-blue-500",   bg: "bg-blue-500/[0.02] dark:bg-blue-500/[0.03] hover:bg-blue-500/[0.04]",  text: "text-blue-700 dark:text-blue-300",  badge: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20" },
+  Green:  { border: "border-l-emerald-500",bg: "bg-emerald-500/[0.02] dark:bg-emerald-500/[0.03] hover:bg-emerald-500/[0.04]", text: "text-emerald-700 dark:text-emerald-300", badge: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20" },
+  Purple: { border: "border-l-purple-500", bg: "bg-purple-500/[0.02] dark:bg-purple-500/[0.03] hover:bg-purple-500/[0.04]",text: "text-purple-700 dark:text-purple-300",badge: "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/20" },
+  Yellow: { border: "border-l-amber-500",  bg: "bg-amber-500/[0.02] dark:bg-amber-500/[0.03] hover:bg-amber-500/[0.04]",  text: "text-amber-700 dark:text-amber-300",  badge: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20" },
+  Orange: { border: "border-l-orange-500", bg: "bg-orange-500/[0.02] dark:bg-orange-500/[0.03] hover:bg-orange-500/[0.04]",text: "text-orange-700 dark:text-orange-300",badge: "bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/20" }
+};
+
+const getCustomColorStyles = (color: string) => {
+  if (color && color.startsWith("#")) {
+    return {
+      borderClass: "",
+      bgClass: "bg-neutral-50 dark:bg-neutral-900/50 hover:bg-neutral-100/80",
+      textClass: "text-neutral-700 dark:text-neutral-300",
+      badgeClass: "bg-neutral-100 text-neutral-700 border-neutral-250/20",
+      borderStyle: { borderLeftColor: color },
+      bgStyle: { backgroundColor: `${color}0D` }, // ~5% opacity
+      textStyle: { color: color },
+      badgeStyle: { backgroundColor: `${color}1A`, color: color, borderColor: `${color}33` }
+    };
+  }
+  const c = COLOR_MAP[color || "Red"] || COLOR_MAP.Red;
+  return {
+    borderClass: c.border,
+    bgClass: c.bg,
+    textClass: c.text,
+    badgeClass: c.badge,
+    borderStyle: {},
+    bgStyle: {},
+    textStyle: {},
+    badgeStyle: {}
+  };
 };
 
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
@@ -298,8 +324,7 @@ function BoardColumn({
         <AnimatePresence mode="popLayout">
           {tasks.map((task) => {
             const isCompleted = task.status === "Completed";
-            const isCustomColor = task.color && task.color.startsWith("#");
-            const borderAccent = isCustomColor ? "" : (COLOR_MAP[task.color || "Red"] || COLOR_MAP.Red);
+            const colorStyles = getCustomColorStyles(task.color || "Red");
             
             return (
               <motion.div
@@ -309,8 +334,12 @@ function BoardColumn({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ type: "spring", stiffness: 380, damping: 26 }}
-                className={`group border-l-4 p-5 rounded-[1.25rem] border border-slate-200 dark:border-slate-800/80 bg-gradient-to-b from-white to-slate-50/95 dark:from-slate-900/95 dark:to-slate-950/95 shadow-[0_6px_16px_-4px_rgba(15,23,42,0.08),0_4px_8px_-2px_rgba(15,23,42,0.04),inset_0_1px_1px_rgba(255,255,255,0.95)] dark:shadow-[0_6px_16px_-4px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.05)] hover:-translate-y-1 hover:scale-[1.01] hover:shadow-[0_20px_35px_-8px_rgba(15,23,42,0.14),0_10px_20px_-5px_rgba(15,23,42,0.06)] dark:hover:shadow-[0_20px_35px_-8px_rgba(0,0,0,0.8),inset_0_1px_1px_rgba(255,255,255,0.08)] transition-all duration-300 flex flex-col gap-3.5 relative overflow-hidden ${borderAccent}`}
-                style={isCustomColor ? { borderLeftColor: task.color } : {}}
+                className={`group border-l-4 p-5 rounded-[1.25rem] border border-neutral-200 dark:border-neutral-800/80 backdrop-blur-md shadow-md shadow-neutral-200/5 hover:-translate-y-1 hover:scale-[1.01] hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 flex flex-col gap-3.5 relative overflow-hidden ${colorStyles.borderClass} ${colorStyles.bgClass} ${colorStyles.textClass}`}
+                style={{
+                  ...colorStyles.borderStyle,
+                  ...colorStyles.bgStyle,
+                  ...colorStyles.textStyle
+                }}
               >
                 {/* Header title/checkbox */}
                 <div className="flex items-start gap-3">
@@ -341,11 +370,10 @@ function BoardColumn({
                   <div className="flex flex-wrap items-center gap-1.5 min-w-0">
                     {/* Category Capsule Badge */}
                     {task.category && (
-                      <span className={`inline-flex items-center gap-1 text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full border shrink-0 ${
-                        task.category === "Payment"
-                          ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
-                          : "bg-white/40 dark:bg-white/5 text-slate-600 dark:text-slate-400 border-white/50 dark:border-white/5 shadow-[inset_0_0.5px_0.5px_rgba(255,255,255,0.3)] backdrop-blur-md"
-                      }`}>
+                      <span 
+                        className={`inline-flex items-center gap-1 text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full border shrink-0 ${colorStyles.badgeClass}`}
+                        style={colorStyles.badgeStyle}
+                      >
                         {CATEGORY_ICONS[task.category] || <HelpCircle className="w-3 h-3" />}
                         {task.category}
                       </span>

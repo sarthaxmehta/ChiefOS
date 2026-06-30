@@ -1,7 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { ScheduleClient } from "./client";
+import { cleanupPastMissions } from "../actions";
 
 export default async function SchedulePage() {
+  await cleanupPastMissions();
   const blocks = await prisma.scheduledBlock.findMany({
     include: { mission: true }
   });

@@ -112,6 +112,16 @@ export function ScheduleClient({ initialEvents, initialUnplannedTasks = [] }: Sc
   const [pickerDate, setPickerDate] = useState<Date>(cDate);
 
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to current hour on load
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      const currentHour = new Date().getHours();
+      const scrollTarget = Math.max(0, (currentHour * 100) - 200); // 100 is row height, show 2 hours prior
+      scrollContainerRef.current.scrollTop = scrollTarget;
+    }
+  }, []);
 
   // Sync picker date with calendar date when it changes
   useEffect(() => {
@@ -129,7 +139,6 @@ export function ScheduleClient({ initialEvents, initialUnplannedTasks = [] }: Sc
       closeTimeoutRef.current = null;
     }
     setCDate(day);
-    setViewMode("day");
     setShowMiniCalendar(false);
   };
 
@@ -174,7 +183,7 @@ export function ScheduleClient({ initialEvents, initialUnplannedTasks = [] }: Sc
 
   const handlePrev = () => {
     if (viewMode === "day") setCDate(subDays(cDate, 1));
-    else if (viewMode === "week") setCDate(subWeeks(cDate, 7)); // Moves by exactly one week
+    else if (viewMode === "week") setCDate(subWeeks(cDate, 1)); // Moves by exactly one week
     else if (viewMode === "month") setCDate(subMonths(cDate, 1));
   };
 
@@ -363,7 +372,7 @@ export function ScheduleClient({ initialEvents, initialUnplannedTasks = [] }: Sc
           </div>
 
         {/* Floating Card Body Grid (Scrollable) */}
-        <div className="flex-1 overflow-y-auto mt-6 pr-1 custom-scrollbar min-h-0">
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto mt-6 pr-1 custom-scrollbar min-h-0">
           
           {/* Day & Week View Layout */}
           {(viewMode === "day" || viewMode === "week") && (

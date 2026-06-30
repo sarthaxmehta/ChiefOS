@@ -5,6 +5,7 @@ import { startOfDay, endOfDay } from "date-fns";
 import { revalidatePath } from "next/cache";
 
 export async function getExecutionData(dateString: string) {
+  await cleanupPastMissions();
   const date = new Date(dateString);
   const start = startOfDay(date);
   const end = endOfDay(date);
@@ -73,6 +74,7 @@ export async function getFilteredMissions(mode: "unplanned" | "planned" | "all")
 }
 
 export async function getTasksForDate(dateString: string) {
+  await cleanupPastMissions();
   const date = new Date(dateString);
   const start = startOfDay(date);
   const end = endOfDay(date);
@@ -439,4 +441,37 @@ export async function updateUserPreferences(data: {
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/settings");
 }
+
+export async function cleanupPastMissions() {
+  const todayStart = startOfDay(new Date());
+
+  const pastIncompleteMissions = await prisma.mission.findMany({
+    where: {
+      date: { lt: todayStart },
+      status: { not: "Completed" }
+    }
+  });
+
+  if (pastIncompleteMissions.length > 0) {
+    const ids = pastIncompleteMissions.map(m => m.id);
+
+    await prisma.scheduledBlock.deleteMany({
+      where: { missionId: { in: ids } }
+    });
+
+    await prisma.mission.updateMany({
+      where: { id: { in: ids } },
+      data: {
+        date: null,
+        startTime: null,
+        endTime: null
+      }
+    });
+
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/schedule");
+    revalidatePath("/dashboard/missions");
+  }
+}
+
 
