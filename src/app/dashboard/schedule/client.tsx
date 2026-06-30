@@ -118,7 +118,7 @@ export function ScheduleClient({ initialEvents, initialUnplannedTasks = [] }: Sc
   useEffect(() => {
     if (scrollContainerRef.current) {
       const currentHour = new Date().getHours();
-      const scrollTarget = Math.max(0, (currentHour * 100) - 200); // 100 is row height, show 2 hours prior
+      const scrollTarget = Math.max(0, (currentHour * hourRowHeight) - 200); // show 2 hours prior
       scrollContainerRef.current.scrollTop = scrollTarget;
     }
   }, []);
