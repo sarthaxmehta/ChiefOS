@@ -4,6 +4,8 @@ import { ResponseGenerator } from "./response-generator";
 import { RiskEngine } from "./risk-engine";
 import { MemoryEngine } from "./memory-engine";
 import { withFallback } from "./model-provider";
+import { auth } from "@/auth";
+import { prisma } from "../prisma";
 
 export class ChiefEngine {
   /**
@@ -26,6 +28,20 @@ export class ChiefEngine {
     
     let actionResult;
 
+    // Resolve user preferences
+    const session = await auth();
+    let userPreferencesText = "";
+    if (session?.user?.email) {
+      const userWithPref = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        include: { preferences: true }
+      });
+      if (userWithPref?.preferences) {
+        const pref = userWithPref.preferences;
+        userPreferencesText = `User Working Hours: ${pref.workDayStart}:00 to ${pref.workDayEnd}:00. Preferred Focus Window: ${pref.preferredFocusWindow}.`;
+      }
+    }
+
     if (simpleGreetings.includes(normalized) || normalized === "") {
       actionResult = {
         type: 'conversational',
@@ -34,7 +50,7 @@ export class ChiefEngine {
       console.log("[ChiefEngine] Fast-pathed simple greeting, bypassing IntentEngine.");
     } else {
       // 1. Intent Engine (Groq → Gemini Flash Lite fallback)
-      const intent = await IntentEngine.parseIntent(userMessage, history, selectedDateIso);
+      const intent = await IntentEngine.parseIntent(userMessage, history, selectedDateIso, userPreferencesText);
       console.log("[ChiefEngine] Parsed Intent:", JSON.stringify(intent, null, 2));
 
       // 2. Action Planner (Deterministic Execution & Data Gathering)
@@ -49,7 +65,8 @@ export class ChiefEngine {
     const fullContext = {
       actionResult,
       riskData,
-      memoryData
+      memoryData,
+      userPreferencesText
     };
 
     // 4. Generate streaming response (Groq primary, fallback on error)

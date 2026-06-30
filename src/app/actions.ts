@@ -6,6 +6,8 @@ import { ChiefEngine } from "@/lib/ai/chief-engine";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { auth } from "@/auth";
+import { startOfDay, endOfDay, setHours, setMinutes, addMinutes } from "date-fns";
 
 const MissionParseSchema = z.object({
   title: z.string(),
@@ -31,6 +33,13 @@ export async function captureMission(input: string) {
       return object;
     });
 
+    const session = await auth();
+    let userId: string | null = null;
+    if (session?.user?.email) {
+      const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+      if (user) userId = user.id;
+    }
+
     // Save to database
     const newMission = await prisma.mission.create({
       data: {
@@ -40,6 +49,7 @@ export async function captureMission(input: string) {
         priority: parsedData.priority || "Low",
         category: parsedData.category || "General",
         context: input,
+        userId
       }
     });
 
@@ -84,10 +94,53 @@ export async function generateSubMissionsAction(missionId: string) {
 }
 
 export async function autoOptimizeScheduleAction() {
-  // A simplistic AI rescheduling simulation for the MVP
-  await new Promise(r => setTimeout(r, 1500));
+  const session = await auth();
+  if (!session?.user?.email) throw new Error("Unauthorized");
+
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+    include: { preferences: true }
+  });
+
+  if (!user) throw new Error("User not found");
+
+  const todayStart = startOfDay(new Date());
+  const todayEnd = endOfDay(new Date());
+
+  const blocks = await prisma.scheduledBlock.findMany({
+    where: {
+      startTime: { gte: todayStart, lte: todayEnd }
+    },
+    orderBy: { startTime: "asc" }
+  });
+
+  if (blocks.length === 0) {
+    return { success: true, message: "Your schedule is currently empty today — nothing to compact!" };
+  }
+
+  const workStartHour = user.preferences?.workDayStart ?? 9;
+  let currentPointer = setHours(setMinutes(new Date(), 0), workStartHour);
+
+  for (const block of blocks) {
+    const durationMinutes = (block.endTime.getTime() - block.startTime.getTime()) / 60000;
+    
+    await prisma.scheduledBlock.update({
+      where: { id: block.id },
+      data: {
+        startTime: currentPointer,
+        endTime: addMinutes(currentPointer, durationMinutes)
+      }
+    });
+
+    currentPointer = addMinutes(currentPointer, durationMinutes);
+  }
+
+  revalidatePath("/dashboard");
   revalidatePath("/dashboard/schedule");
-  return { success: true, message: "AI has successfully compacted your schedule and resolved 2 overlaps." };
+  return { 
+    success: true, 
+    message: `AI has successfully compacted ${blocks.length} scheduled task blocks sequentially, starting at your workday start of ${workStartHour}:00!` 
+  };
 }
 
 export async function generateBriefingAction() {
@@ -100,6 +153,13 @@ export async function generateBriefingAction() {
 }
 export async function createManualMissionAction(data: any) {
   try {
+    const session = await auth();
+    let userId: string | null = null;
+    if (session?.user?.email) {
+      const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+      if (user) userId = user.id;
+    }
+
     const newMission = await prisma.mission.create({
       data: {
         title: data.title,
@@ -112,6 +172,7 @@ export async function createManualMissionAction(data: any) {
         color: data.color || "Red",
         notes: data.notes || null,
         recurringRule: data.recurringRule || null,
+        userId
       }
     });
 

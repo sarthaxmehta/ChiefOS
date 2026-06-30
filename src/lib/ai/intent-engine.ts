@@ -132,7 +132,7 @@ export const IntentSchema = z.object({
 export type ParsedIntent = z.infer<typeof IntentSchema>;
 
 // ─── Shared System Prompt ──────────────────────────────────────────────────────
-function buildSystemPrompt(refDate: Date, schemaBlock: string = ''): string {
+function buildSystemPrompt(refDate: Date, schemaBlock: string = '', userPreferencesText: string = ''): string {
   const todayStr = refDate.toISOString().split('T')[0];
   const tomorrow = new Date(refDate);
   tomorrow.setDate(tomorrow.getDate() + 1);
@@ -145,6 +145,8 @@ Your job is to classify the user's message into an executable intent and extract
 CURRENT DATE AND TIME: ${refDate.toString()}
 ISO: ${refDate.toISOString()}
 Today is ${dayOfWeek}, ${todayStr}. Tomorrow is ${tomorrowStr}.
+
+${userPreferencesText ? `USER WORK PREFERENCES AND SETTINGS:\n${userPreferencesText}\n\n` : ""}
 
 DATE RESOLUTION RULES (CRITICAL — always resolve to YYYY-MM-DD):
 - "today" → ${todayStr}
@@ -251,7 +253,7 @@ export class IntentEngine {
    * Converts natural language into a structured intent.
    * Uses Groq (14,400 RPD) as primary, falls back through model chain.
    */
-  static async parseIntent(userMessage: string, history: any[] = [], referenceDateIso?: string): Promise<ParsedIntent> {
+  static async parseIntent(userMessage: string, history: any[] = [], referenceDateIso?: string, userPreferencesText?: string): Promise<ParsedIntent> {
     try {
       const result = await withFallback('intent_parsing', async (model) => {
         const refDate = referenceDateIso ? new Date(referenceDateIso) : new Date();
@@ -317,7 +319,7 @@ You must return a valid JSON object with this EXACT structure (all fields option
   },
   "conversationalReply": string   // only for conversational intent
 }`;
-          const systemPrompt = buildSystemPrompt(refDate, schemaInstructions);
+          const systemPrompt = buildSystemPrompt(refDate, schemaInstructions, userPreferencesText);
 
           const { text } = await (generateText as any)({
             model,
@@ -338,7 +340,7 @@ You must return a valid JSON object with this EXACT structure (all fields option
 
           return JSON.parse(cleaned) as ParsedIntent;
         } else {
-          const systemPrompt = buildSystemPrompt(refDate);
+          const systemPrompt = buildSystemPrompt(refDate, '', userPreferencesText);
           const { object } = await generateObject({
             model,
             schema: IntentSchema,

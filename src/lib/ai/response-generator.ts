@@ -69,6 +69,7 @@ You are speaking directly to the user in a professional yet warm tone — like a
 
 CURRENT DATE AND TIME (user's timezone): ${new Date().toString()}
 
+${engineData?.userPreferencesText ? `USER WORK PREFERENCES AND SETTINGS:\n${engineData.userPreferencesText}\n\n` : ""}
 ENGINE RESULT DATA (dates shown in user's local timezone):
 ${JSON.stringify(localizedEngineData, null, 2)}
 
