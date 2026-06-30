@@ -27,7 +27,8 @@ export class SchedulingEngine {
   ): Promise<{ start: Date; end: Date }[]> {
 
     // 1. Fetch user work-day preferences
-    const user = await prisma.user.findFirst({
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
       include: { preferences: true }
     });
 
@@ -60,7 +61,8 @@ export class SchedulingEngine {
     const blocks = await prisma.scheduledBlock.findMany({
       where: {
         startTime: { gte: startOfTarget },
-        endTime:   { lte: endOfTarget }
+        endTime:   { lte: endOfTarget },
+        mission: { userId }
       },
       orderBy: { startTime: 'asc' }
     });

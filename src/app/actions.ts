@@ -18,7 +18,14 @@ const MissionParseSchema = z.object({
 });
 
 export async function captureMission(input: string) {
+  let userId: string | null = null;
   try {
+    const session = await auth();
+    if (session?.user?.email) {
+      const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+      if (user) userId = user.id;
+    }
+
     // Use the new model provider with automatic fallback
     const parsedData = await withFallback('mission_parsing', async (model) => {
       const { object } = await generateObject({
@@ -32,13 +39,6 @@ export async function captureMission(input: string) {
       });
       return object;
     });
-
-    const session = await auth();
-    let userId: string | null = null;
-    if (session?.user?.email) {
-      const user = await prisma.user.findUnique({ where: { email: session.user.email } });
-      if (user) userId = user.id;
-    }
 
     // Save to database
     const newMission = await prisma.mission.create({
@@ -71,6 +71,7 @@ export async function captureMission(input: string) {
         priority: "Low",
         category: "General",
         context: input,
+        userId
       }
     });
 
@@ -81,6 +82,16 @@ export async function captureMission(input: string) {
 
 export async function generateSubMissionsAction(missionId: string) {
   try {
+    const session = await auth();
+    if (!session?.user?.email) throw new Error("Unauthorized");
+    const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+    if (!user) throw new Error("User not found");
+
+    const mission = await prisma.mission.findFirst({
+      where: { id: missionId, userId: user.id }
+    });
+    if (!mission) throw new Error("Unauthorized");
+
     const success = await ChiefEngine.generateSubMissions(missionId);
     if (success) {
       revalidatePath(`/dashboard/missions/${missionId}`);
@@ -109,7 +120,8 @@ export async function autoOptimizeScheduleAction() {
 
   const blocks = await prisma.scheduledBlock.findMany({
     where: {
-      startTime: { gte: todayStart, lte: todayEnd }
+      startTime: { gte: todayStart, lte: todayEnd },
+      mission: { userId: user.id }
     },
     orderBy: { startTime: "asc" }
   });
@@ -145,7 +157,12 @@ export async function autoOptimizeScheduleAction() {
 
 export async function generateBriefingAction() {
   try {
-    const briefing = await ChiefEngine.generateDailyBriefing();
+    const session = await auth();
+    if (!session?.user?.email) throw new Error("Unauthorized");
+    const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+    if (!user) throw new Error("User not found");
+    
+    const briefing = await ChiefEngine.generateDailyBriefing(user.id);
     return { success: true, briefing };
   } catch (e) {
     return { success: false, briefing: "Failed to generate AI briefing." };

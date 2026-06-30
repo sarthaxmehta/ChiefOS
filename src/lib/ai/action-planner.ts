@@ -239,7 +239,7 @@ export class ActionPlanner {
 
     } else if (!recurringRule || recurringRule === "One-time") {
       schedulingOptions = await SchedulingEngine.findAvailableSlots(
-        duration, targetDate, "default", data.preferredTime
+        duration, targetDate, userId || "default", data.preferredTime
       );
       if (schedulingOptions.length > 0) {
         const slotStart = schedulingOptions[0].start;
@@ -814,7 +814,7 @@ export class ActionPlanner {
     }
 
     const slots = await SchedulingEngine.findAvailableSlots(
-      duration, targetDate, "default", mission.preferredTime || undefined
+      duration, targetDate, userId || "default", mission.preferredTime || undefined
     );
 
     if (slots.length > 0) {

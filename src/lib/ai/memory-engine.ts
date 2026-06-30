@@ -10,6 +10,7 @@ export class MemoryEngine {
     try {
       // 1. Compute Optimal Deep Work Time by looking at completed focus sessions or work sessions
       const sessions = await prisma.workSession.findMany({
+        where: { mission: { userId } },
         take: 50,
         orderBy: { startTime: 'desc' }
       });
@@ -37,7 +38,7 @@ export class MemoryEngine {
       // 2. Identify Frequently Postponed categories
       // Find missions that are still Pending or have been postponed
       const pendingMissions = await prisma.mission.findMany({
-        where: { status: "Pending" },
+        where: { status: "Pending", userId },
         select: { category: true }
       });
 
@@ -63,7 +64,8 @@ export class MemoryEngine {
       const oneWeekAgo = subDays(new Date(), 7);
       const recentSessions = await prisma.workSession.findMany({
         where: {
-          startTime: { gte: oneWeekAgo }
+          startTime: { gte: oneWeekAgo },
+          mission: { userId }
         },
         select: { durationMinutes: true }
       });

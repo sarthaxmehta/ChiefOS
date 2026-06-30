@@ -63,8 +63,8 @@ export class ChiefEngine {
     console.log("[ChiefEngine] Action Result Type:", actionResult.type);
 
     // 3. Gather Context (Risk & Memory — both deterministic, no AI)
-    const riskData = await RiskEngine.evaluateWorkloadRisk();
-    const memoryData = await MemoryEngine.getProductivityPatterns();
+    const riskData = await RiskEngine.evaluateWorkloadRisk(userId);
+    const memoryData = await MemoryEngine.getProductivityPatterns(userId);
 
     const fullContext = {
       actionResult,
@@ -125,17 +125,17 @@ export class ChiefEngine {
     return true;
   }
 
-  static async generateDailyBriefing() {
+  static async generateDailyBriefing(userId: string) {
     const { RiskEngine } = await import("./risk-engine");
     const { MemoryEngine } = await import("./memory-engine");
     const { prisma } = await import("../prisma");
     const { generateText } = await import('ai');
 
-    const risk = await RiskEngine.evaluateWorkloadRisk();
-    const memory = await MemoryEngine.getProductivityPatterns();
+    const risk = await RiskEngine.evaluateWorkloadRisk(userId);
+    const memory = await MemoryEngine.getProductivityPatterns(userId);
 
     const pendingMissions = await prisma.mission.findMany({
-      where: { status: "Pending" },
+      where: { status: "Pending", userId },
       select: { title: true, priority: true, category: true }
     });
     const taskList = pendingMissions.map(m => `${m.title} (${m.priority}, ${m.category || 'General'})`).join(", ");

@@ -1,11 +1,17 @@
 import { ChiefEngine } from "@/lib/ai/chief-engine";
 import { revalidatePath } from "next/cache";
+import { auth } from "@/auth";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   try {
+    const session = await auth();
+    if (!session?.user?.email) {
+      return new Response("Unauthorized", { status: 401 });
+    }
+
     const url = new URL(req.url);
     const selectedDate = url.searchParams.get("selectedDate") || undefined;
     const { messages } = await req.json();

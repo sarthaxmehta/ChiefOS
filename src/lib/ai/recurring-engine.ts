@@ -62,6 +62,7 @@ export class RecurringEngine {
         isAIScheduled: false,
         startTime: null,
         endTime: null,
+        userId: originalMission.userId
       }
     });
 

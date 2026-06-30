@@ -1,17 +1,31 @@
 import { prisma } from "@/lib/prisma";
 import { ScheduleClient } from "./client";
 import { cleanupPastMissions } from "../actions";
+import { auth } from "@/auth";
+
+export const dynamic = "force-dynamic";
 
 export default async function SchedulePage() {
   await cleanupPastMissions();
+
+  const session = await auth();
+  if (!session?.user?.email) throw new Error("Unauthorized");
+  const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+  if (!user) throw new Error("User not found");
+  const userId = user.id;
+
   const blocks = await prisma.scheduledBlock.findMany({
+    where: { mission: { userId } },
     include: { mission: true }
   });
 
-  const events = await prisma.calendarEvent.findMany();
+  const events = await prisma.calendarEvent.findMany({
+    where: { userId }
+  });
 
   const unplannedMissions = await prisma.mission.findMany({
     where: {
+      userId,
       date: { not: null },
       startTime: null,
       endTime: null

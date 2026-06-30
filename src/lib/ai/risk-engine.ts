@@ -7,7 +7,7 @@ export class RiskEngine {
   static async evaluateWorkloadRisk(userId: string = "default") {
     // 1. Find all pending missions
     const pendingMissions = await prisma.mission.findMany({
-      where: { status: "Pending" }
+      where: { status: "Pending", userId }
     });
 
     const totalEstimatedMinutes = pendingMissions.reduce((acc, m) => acc + (m.estimatedMinutes || 60), 0);
