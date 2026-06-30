@@ -37,6 +37,7 @@ interface Mission {
   date: Date | null;
   startTime: Date | null;
   endTime: Date | null;
+  estimatedMinutes: number | null;
   priority: string;
   status: string;
   category: string | null;
@@ -334,27 +335,30 @@ function BoardColumn({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ type: "spring", stiffness: 380, damping: 26 }}
-                className={`group border-l-4 p-5 rounded-[1.25rem] border border-neutral-200 dark:border-neutral-800/80 backdrop-blur-md shadow-md shadow-neutral-200/5 hover:-translate-y-1 hover:scale-[1.01] hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 flex flex-col gap-3.5 relative overflow-hidden ${colorStyles.borderClass} ${colorStyles.bgClass} ${colorStyles.textClass}`}
+                className={`group border-l-[3px] p-5 rounded-[1.25rem] border border-slate-200/60 dark:border-slate-800/60 hover:border-current/30 shadow-[0_4px_16px_-4px_rgba(15,23,42,0.04),inset_0_1px_1.5px_rgba(255,255,255,0.9)] dark:shadow-[0_4px_16px_-4px_rgba(0,0,0,0.3)] hover:-translate-y-0.5 hover:shadow-[0_20px_35px_-10px_rgba(15,23,42,0.08)] transition-all duration-300 flex flex-col gap-3.5 relative overflow-hidden ${colorStyles.borderClass} ${colorStyles.bgClass} ${colorStyles.textClass}`}
                 style={{
                   ...colorStyles.borderStyle,
                   ...colorStyles.bgStyle,
                   ...colorStyles.textStyle
                 }}
               >
+                {/* Corner Dynamic Glowing Blob */}
+                <div className="absolute -top-10 -right-10 w-24 h-24 bg-current opacity-[0.04] blur-xl rounded-full group-hover:scale-125 transition-transform duration-500 pointer-events-none" />
+
                 {/* Header title/checkbox */}
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-3 relative z-10">
                   <button
                     onClick={() => onToggleStatus(task.id, task.status)}
-                    className="shrink-0 mt-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                    className="shrink-0 mt-0.5 text-slate-400 hover:text-slate-650 dark:hover:text-slate-200 transition-colors cursor-pointer"
                   >
                     {isCompleted ? (
-                      <CheckCircle2 className="w-5 h-5 text-primary fill-primary/10 shadow-[0_0_10px_rgba(var(--primary-rgb),0.3)]" />
+                      <CheckCircle2 className="w-5 h-5 text-primary fill-primary/10 transition-transform scale-105" />
                     ) : (
-                      <Circle className="w-5 h-5 text-slate-400/80 hover:text-primary transition-all duration-200" />
+                      <Circle className="w-5 h-5 text-slate-350 dark:text-slate-650 hover:text-primary transition-all duration-200" />
                     )}
                   </button>
                   <div className="flex-grow min-w-0">
-                    <h3 className={`text-xs font-extrabold leading-snug tracking-tight truncate ${isCompleted ? "text-slate-400 dark:text-slate-600 line-through font-medium" : "text-slate-800 dark:text-slate-100"}`}>
+                    <h3 className={`text-xs font-bold leading-snug tracking-tight truncate ${isCompleted ? "text-slate-400 dark:text-slate-600 line-through font-medium" : "text-slate-800 dark:text-slate-100"}`}>
                       {task.title}
                     </h3>
                     {task.description && (
@@ -366,7 +370,7 @@ function BoardColumn({
                 </div>
 
                 {/* Footer metadata & category badge */}
-                <div className="flex items-center justify-between border-t border-slate-200/60 dark:border-white/10 pt-2.5 mt-0.5 shrink-0 gap-2">
+                <div className="flex items-center justify-between border-t border-slate-200/60 dark:border-white/10 pt-2.5 mt-0.5 shrink-0 gap-2 relative z-10">
                   <div className="flex flex-wrap items-center gap-1.5 min-w-0">
                     {/* Category Capsule Badge */}
                     {task.category && (
@@ -384,6 +388,14 @@ function BoardColumn({
                       <span className="inline-flex items-center gap-1 text-[9px] font-extrabold uppercase text-slate-500 dark:text-slate-400 bg-white/30 dark:bg-white/5 border border-white/30 dark:border-white/5 px-2 py-0.5 rounded-full shrink-0">
                         <Calendar className="w-2.5 h-2.5 opacity-70" />
                         {format(new Date(task.date), "MMM d")}
+                      </span>
+                    )}
+
+                    {/* Estimated Hours Capsule Badge */}
+                    {task.estimatedMinutes && (
+                      <span className="inline-flex items-center gap-1 text-[9px] font-extrabold uppercase text-slate-500 dark:text-slate-400 bg-white/30 dark:bg-white/5 border border-white/30 dark:border-white/5 px-2 py-0.5 rounded-full shrink-0">
+                        <Clock className="w-2.5 h-2.5 opacity-70" />
+                        {Math.round(task.estimatedMinutes / 60)}h{task.estimatedMinutes % 60 > 0 ? ` ${task.estimatedMinutes % 60}m` : ""}
                       </span>
                     )}
                   </div>
