@@ -14,6 +14,7 @@ export async function POST(req: Request) {
 
     const url = new URL(req.url);
     const selectedDate = url.searchParams.get("selectedDate") || undefined;
+    const tzOffset = parseInt(url.searchParams.get("tzOffset") || "0", 10);
     const { messages } = await req.json();
 
     const getMessageText = (message: any): string => {
@@ -34,7 +35,7 @@ export async function POST(req: Request) {
       content: getMessageText(m)
     }));
 
-    const { stream, actionType } = await ChiefEngine.processMessage(latestMessage, sanitizedHistory, selectedDate);
+    const { stream, actionType } = await ChiefEngine.processMessage(latestMessage, sanitizedHistory, selectedDate, tzOffset);
     
     // Revalidate dashboard data for any action that mutates the database
     const dataMutatingActions = ['task_created', 'task_rescheduled', 'task_decomposed'];

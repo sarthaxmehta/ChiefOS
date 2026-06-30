@@ -11,12 +11,12 @@ export class ActionPlanner {
    * The AI extraction feeds directly into the prisma Mission model.
    * Any field the AI didn't extract gets a sensible default.
    */
-  static async executeIntent(intentData: ParsedIntent, referenceDateIso?: string, userMessage?: string, userId?: string) {
+  static async executeIntent(intentData: ParsedIntent, referenceDateIso?: string, userMessage?: string, userId?: string, tzOffset: number = 0) {
     const { intent, extractedData } = intentData;
 
     switch (intent) {
       case 'create_task':
-        return await this.handleCreateTask(extractedData, referenceDateIso, userMessage, userId);
+        return await this.handleCreateTask(extractedData, referenceDateIso, userMessage, userId, tzOffset);
 
       case 'add_subtasks':
         return await this.handleAddSubtasks(extractedData, userMessage, userId);
@@ -37,13 +37,13 @@ export class ActionPlanner {
         return await this.handleGetSchedule(extractedData, referenceDateIso, userId);
 
       case 'reschedule_tasks':
-        return await this.handleRescheduleTasks(extractedData, referenceDateIso, userId);
+        return await this.handleRescheduleTasks(extractedData, referenceDateIso, userId, tzOffset);
 
       case 'complete_task':
         return await this.handleCompleteTask(extractedData, userMessage, userId);
 
       case 'update_task':
-        return await this.handleUpdateTask(extractedData, userMessage, userId);
+        return await this.handleUpdateTask(extractedData, userMessage, userId, tzOffset);
 
       case 'list_tasks':
         return await this.handleListTasks(extractedData, referenceDateIso, userId);
@@ -137,9 +137,13 @@ export class ActionPlanner {
     return Math.min(100, priorityScore + energyScore + typeScore);
   }
 
+  private static applyLocalTime(date: Date, hours: number, minutes: number, tzOffsetMins: number) {
+    date.setUTCHours(hours, minutes + tzOffsetMins, 0, 0);
+  }
+
   // ─── Create Task Handler ────────────────────────────────────────────────────
 
-  private static async handleCreateTask(data: any, referenceDateIso?: string, userMessage?: string, userId?: string) {
+  private static async handleCreateTask(data: any, referenceDateIso?: string, userMessage?: string, userId?: string, tzOffset: number = 0) {
     if (!data || !data.title) {
       return { type: 'error', message: "I need a task title to create a task." };
     }
@@ -183,9 +187,9 @@ export class ActionPlanner {
       if (data.startTimeString) {
         const evStart = new Date(targetDate);
         const [h, m] = data.startTimeString.split(':').map(Number);
-        evStart.setHours(h, m, 0, 0);
+        this.applyLocalTime(evStart, h, m, tzOffset);
         const evEnd = data.endTimeString
-          ? (() => { const d = new Date(targetDate); const [eh, em] = data.endTimeString.split(':').map(Number); d.setHours(eh, em, 0, 0); return d; })()
+          ? (() => { const d = new Date(targetDate); const [eh, em] = data.endTimeString.split(':').map(Number); this.applyLocalTime(d, eh, em, tzOffset); return d; })()
           : new Date(evStart.getTime() + duration * 60000);
 
         await prisma.calendarEvent.create({
@@ -209,13 +213,13 @@ export class ActionPlanner {
     if (data.startTimeString) {
       const startTime = new Date(targetDate);
       const [hours, minutes] = data.startTimeString.split(':').map(Number);
-      startTime.setHours(hours, minutes, 0, 0);
+      this.applyLocalTime(startTime, hours, minutes, tzOffset);
 
       let endTime: Date;
       if (data.endTimeString) {
         endTime = new Date(targetDate);
         const [eH, eM] = data.endTimeString.split(':').map(Number);
-        endTime.setHours(eH, eM, 0, 0);
+        this.applyLocalTime(endTime, eH, eM, tzOffset);
       } else {
         endTime = new Date(startTime.getTime() + duration * 60000);
       }
@@ -511,7 +515,7 @@ export class ActionPlanner {
 
   // ─── Update Task Handler ────────────────────────────────────────────────────
 
-  private static async handleUpdateTask(data: any, userMessage?: string, userId?: string) {
+  private static async handleUpdateTask(data: any, userMessage?: string, userId?: string, tzOffset: number = 0) {
     if (!data?.title) {
       return { type: 'error', message: "I need the task name to update." };
     }
@@ -563,12 +567,12 @@ export class ActionPlanner {
     if (data.newStartTime) {
       newStart = new Date(targetDate);
       const [h, m] = data.newStartTime.split(':').map(Number);
-      newStart.setHours(h, m, 0, 0);
+      this.applyLocalTime(newStart, h, m, tzOffset);
       
       if (data.newEndTime) {
         newEnd = new Date(targetDate);
         const [eh, em] = data.newEndTime.split(':').map(Number);
-        newEnd.setHours(eh, em, 0, 0);
+        this.applyLocalTime(newEnd, eh, em, tzOffset);
       } else {
         newEnd = new Date(newStart.getTime() + duration * 60000);
       }
@@ -578,9 +582,10 @@ export class ActionPlanner {
       timeChanged = true;
     } else if (data.newDateIso && newStart) {
       newStart = new Date(targetDate);
-      newStart.setHours(mission.startTime!.getHours(), mission.startTime!.getMinutes(), 0, 0);
+      newStart.setHours(mission.startTime!.getHours(), mission.startTime!.getMinutes(), 0, 0); // Keep UTC exact hours? Or is mission.startTime already UTC? It is UTC! So getUTCHours!
+      newStart.setUTCHours(mission.startTime!.getUTCHours(), mission.startTime!.getUTCMinutes(), 0, 0);
       newEnd = new Date(targetDate);
-      newEnd.setHours(mission.endTime!.getHours(), mission.endTime!.getMinutes(), 0, 0);
+      newEnd.setUTCHours(mission.endTime!.getUTCHours(), mission.endTime!.getUTCMinutes(), 0, 0);
       timeChanged = true;
     }
 
@@ -753,7 +758,7 @@ export class ActionPlanner {
 
   // ─── Reschedule Tasks Handler ───────────────────────────────────────────────
 
-  private static async handleRescheduleTasks(data: any, referenceDateIso?: string, userId?: string) {
+  private static async handleRescheduleTasks(data: any, referenceDateIso?: string, userId?: string, tzOffset: number = 0) {
     if (!data || !data.title) {
       return { type: 'error', message: "I need a task title to reschedule." };
     }
@@ -775,13 +780,13 @@ export class ActionPlanner {
     if (data.startTimeString) {
       const newStart = new Date(targetDate);
       const [hours, minutes] = data.startTimeString.split(':').map(Number);
-      newStart.setHours(hours, minutes, 0, 0);
+      this.applyLocalTime(newStart, hours, minutes, tzOffset);
 
       let newEnd: Date;
       if (data.endTimeString) {
         newEnd = new Date(targetDate);
         const [eH, eM] = data.endTimeString.split(':').map(Number);
-        newEnd.setHours(eH, eM, 0, 0);
+        this.applyLocalTime(newEnd, eH, eM, tzOffset);
       } else {
         newEnd = new Date(newStart.getTime() + duration * 60000);
       }

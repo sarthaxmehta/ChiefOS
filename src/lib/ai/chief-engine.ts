@@ -20,7 +20,7 @@ export class ChiefEngine {
    *   4. Context Gathering → Risk + Memory engines (no AI)
    *   5. Response Generator → streaming response (Groq, 14,400 RPD)
    */
-  static async processMessage(userMessage: string, history: any[] = [], selectedDateIso?: string): Promise<{ stream: any; actionType: string }> {
+  static async processMessage(userMessage: string, history: any[] = [], selectedDateIso?: string, tzOffset: number = 0): Promise<{ stream: any; actionType: string }> {
     console.log("[ChiefEngine] Processing message:", userMessage, "Selected Date Context:", selectedDateIso);
     
     const normalized = userMessage.toLowerCase().trim().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g,"");
@@ -58,7 +58,7 @@ export class ChiefEngine {
       console.log("[ChiefEngine] Parsed Intent:", JSON.stringify(intent, null, 2));
 
       // 2. Action Planner (Deterministic Execution & Data Gathering)
-      actionResult = await ActionPlanner.executeIntent(intent, selectedDateIso, userMessage, userId);
+      actionResult = await ActionPlanner.executeIntent(intent, selectedDateIso, userMessage, userId, tzOffset);
     }
     console.log("[ChiefEngine] Action Result Type:", actionResult.type);
 

@@ -18,17 +18,26 @@ async function getUserId() {
 }
 
 // Timezone-independent Date boundaries utility
-function parseDateRangeUTC(dateString: string) {
+function parseDateRangeUTC(dateString: string, tzOffsetMins: number = 0) {
+  // If dateString contains T, it might be an ISO string, but we want the local date it represents.
+  // We should extract just the YYYY-MM-DD part.
   const [y, m, d] = dateString.split("T")[0].split("-").map(Number);
-  const start = new Date(Date.UTC(y, m - 1, d, 0, 0, 0));
-  const end = new Date(Date.UTC(y, m - 1, d, 23, 59, 59, 999));
+  
+  // Calculate the start and end of the local day in UTC
+  // Local midnight = UTC midnight + tzOffsetMins
+  const offsetHours = Math.floor(tzOffsetMins / 60);
+  const offsetMins = tzOffsetMins % 60;
+  
+  const start = new Date(Date.UTC(y, m - 1, d, offsetHours, offsetMins, 0));
+  const end = new Date(Date.UTC(y, m - 1, d, 23 + offsetHours, 59 + offsetMins, 59, 999));
+  
   return { start, end };
 }
 
-export async function getExecutionData(dateString: string) {
+export async function getExecutionData(dateString: string, tzOffset: number = 0) {
   const userId = await getUserId();
   await cleanupPastMissions();
-  const { start, end } = parseDateRangeUTC(dateString);
+  const { start, end } = parseDateRangeUTC(dateString, tzOffset);
 
   const blocks = await prisma.scheduledBlock.findMany({
     where: {
@@ -105,10 +114,10 @@ export async function getFilteredMissions(mode: "unplanned" | "planned" | "all")
   });
 }
 
-export async function getTasksForDate(dateString: string) {
+export async function getTasksForDate(dateString: string, tzOffset: number = 0) {
   const userId = await getUserId();
   await cleanupPastMissions();
-  const { start, end } = parseDateRangeUTC(dateString);
+  const { start, end } = parseDateRangeUTC(dateString, tzOffset);
 
   const blocks = await prisma.scheduledBlock.findMany({
     where: {
@@ -197,16 +206,20 @@ export async function createMission(data: any) {
     let dateVal: Date | null = null;
 
     if (data.scheduledDate) {
-      dateVal = new Date(data.scheduledDate);
+      const [y, m, d] = data.scheduledDate.split("-").map(Number);
+      dateVal = new Date(Date.UTC(y, m - 1, d, 0, 0, 0));
+      
+      const tzOffset = data.tzOffset || 0;
+
       if (data.startTime) {
         const startParts = data.startTime.split(":");
         startTime = new Date(dateVal);
-        startTime.setHours(parseInt(startParts[0], 10), parseInt(startParts[1], 10), 0, 0);
+        startTime.setUTCHours(parseInt(startParts[0], 10), parseInt(startParts[1], 10) + tzOffset, 0, 0);
       }
       if (data.endTime) {
         const endParts = data.endTime.split(":");
         endTime = new Date(dateVal);
-        endTime.setHours(parseInt(endParts[0], 10), parseInt(endParts[1], 10), 0, 0);
+        endTime.setUTCHours(parseInt(endParts[0], 10), parseInt(endParts[1], 10) + tzOffset, 0, 0);
       }
     }
 
@@ -332,16 +345,20 @@ export async function updateMission(missionId: string, data: any) {
     let dateVal: Date | null = null;
 
     if (data.scheduledDate) {
-      dateVal = new Date(data.scheduledDate);
+      const [y, m, d] = data.scheduledDate.split("-").map(Number);
+      dateVal = new Date(Date.UTC(y, m - 1, d, 0, 0, 0));
+      
+      const tzOffset = data.tzOffset || 0;
+
       if (data.startTime) {
         const startParts = data.startTime.split(":");
         startTime = new Date(dateVal);
-        startTime.setHours(parseInt(startParts[0], 10), parseInt(startParts[1], 10), 0, 0);
+        startTime.setUTCHours(parseInt(startParts[0], 10), parseInt(startParts[1], 10) + tzOffset, 0, 0);
       }
       if (data.endTime) {
         const endParts = data.endTime.split(":");
         endTime = new Date(dateVal);
-        endTime.setHours(parseInt(endParts[0], 10), parseInt(endParts[1], 10), 0, 0);
+        endTime.setUTCHours(parseInt(endParts[0], 10), parseInt(endParts[1], 10) + tzOffset, 0, 0);
       }
     }
 

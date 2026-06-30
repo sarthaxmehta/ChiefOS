@@ -64,7 +64,8 @@ export function TodayTasks({
   const fetchTasks = useCallback(async () => {
     setLoading(true);
     if (filterMode === "date") {
-      const tasks = await getTasksForDate(selectedDate.toISOString());
+      const tzOffset = new Date().getTimezoneOffset();
+      const tasks = await getTasksForDate(format(selectedDate, "yyyy-MM-dd"), tzOffset);
       const sortedTasks = [...tasks].sort((a, b) => {
         const aDone = a.mission?.status === "Completed";
         const bDone = b.mission?.status === "Completed";

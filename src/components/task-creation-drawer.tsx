@@ -236,6 +236,7 @@ export function TaskCreationDrawer({ isOpen, onClose, initialDate, taskToEdit }:
       scheduledDate: (scheduleNow || schedulingMode === "Schedule Now") && scheduledDate ? scheduledDate : null,
       startTime: (scheduleNow || schedulingMode === "Schedule Now") && startTime ? startTime : null,
       endTime: (scheduleNow || schedulingMode === "Schedule Now") && endTime ? endTime : null,
+      tzOffset: new Date().getTimezoneOffset(),
       category: finalCategory,
       color,
       subtasks: subtasks.map(s => s.title),

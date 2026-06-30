@@ -13,7 +13,7 @@ export function DashboardAIPanel({ selectedDate, userEmail, onClose }: { selecte
 
   const { messages, sendMessage, status, error, setMessages } = useChat({
     transport: new DefaultChatTransport({
-      api: `/api/chief/chat?selectedDate=${encodeURIComponent(selectedDate.toISOString())}`
+      api: `/api/chief/chat?selectedDate=${format(selectedDate, "yyyy-MM-dd")}&tzOffset=${new Date().getTimezoneOffset()}`
     }),
     messages: []
   });

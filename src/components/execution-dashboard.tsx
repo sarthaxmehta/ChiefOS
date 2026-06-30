@@ -19,7 +19,8 @@ export function ExecutionDashboard({ selectedDate }: { selectedDate: Date }) {
     let mounted = true;
     const fetchExecutionData = () => {
       setLoading(true);
-      getExecutionData(selectedDate.toISOString()).then((res) => {
+      const tzOffset = new Date().getTimezoneOffset();
+      getExecutionData(format(selectedDate, "yyyy-MM-dd"), tzOffset).then((res) => {
         if (mounted) {
           setData(res);
           setLoading(false);
@@ -58,7 +59,8 @@ export function ExecutionDashboard({ selectedDate }: { selectedDate: Date }) {
       await markMissionDone(missionId);
       toast.success("Mission marked as completed!");
       // Optimistic or re-fetch here if needed
-      const updated = await getExecutionData(selectedDate.toISOString());
+      const tzOffset = new Date().getTimezoneOffset();
+      const updated = await getExecutionData(format(selectedDate, "yyyy-MM-dd"), tzOffset);
       setData(updated);
     } catch (e) {
       toast.error("Failed to complete mission");
@@ -69,7 +71,8 @@ export function ExecutionDashboard({ selectedDate }: { selectedDate: Date }) {
     try {
       await startMissionEarly(blockId, currentTime);
       toast.success("Started early!");
-      const updated = await getExecutionData(selectedDate.toISOString());
+      const tzOffset = new Date().getTimezoneOffset();
+      const updated = await getExecutionData(format(selectedDate, "yyyy-MM-dd"), tzOffset);
       setData(updated);
     } catch (e) {
       toast.error("Failed to start early");
