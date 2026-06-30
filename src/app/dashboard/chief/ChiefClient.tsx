@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { 
   Paperclip, 
   Globe, 
@@ -44,7 +44,7 @@ export function ChiefClient({ initialUserName }: ChiefClientProps) {
   const dateKey = format(selectedDate, "yyyy-MM-dd");
 
   // Load list of dates with active chat history from localStorage
-  const loadHistoryKeys = () => {
+  const loadHistoryKeys = useCallback(() => {
     if (typeof window === "undefined") return;
     const keys: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
@@ -56,8 +56,14 @@ export function ChiefClient({ initialUserName }: ChiefClientProps) {
     }
     // Sort descending by date
     keys.sort((a, b) => b.localeCompare(a));
-    setHistoryKeys(keys);
-  };
+    
+    setHistoryKeys((prev) => {
+      if (JSON.stringify(prev) === JSON.stringify(keys)) {
+        return prev;
+      }
+      return keys;
+    });
+  }, []);
 
   useEffect(() => {
     loadHistoryKeys();
