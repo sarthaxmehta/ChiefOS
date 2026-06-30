@@ -53,8 +53,8 @@ const MODEL_CHAINS: Record<AITask, ModelConfig[]> = {
     { provider: 'groq',   modelId: 'llama-3.3-70b-versatile',  label: 'Groq Llama 3.3 70B' },
   ],
   daily_briefing: [
-    { provider: 'google', modelId: 'gemma-4-26b-a4b-it',       label: 'Gemma 4 26B' },
     { provider: 'groq',   modelId: 'llama-3.3-70b-versatile',  label: 'Groq Llama 3.3 70B' },
+    { provider: 'google', modelId: 'gemma-4-26b-a4b-it',       label: 'Gemma 4 26B' },
   ],
   mission_parsing: [
     { provider: 'groq',   modelId: 'llama-3.3-70b-versatile',  label: 'Groq Llama 3.3 70B' },

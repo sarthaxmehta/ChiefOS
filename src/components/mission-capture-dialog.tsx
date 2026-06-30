@@ -10,7 +10,7 @@ const COLORS = [
   { name: "Red", value: "Red", class: "bg-red-500 hover:bg-red-600 ring-red-500" },
   { name: "Blue", value: "Blue", class: "bg-blue-500 hover:bg-blue-600 ring-blue-500" },
   { name: "Green", value: "Green", class: "bg-green-500 hover:bg-green-600 ring-green-500" },
-  { name: "Purple", value: "Purple", class: "bg-purple-500 hover:bg-purple-600 ring-purple-500" },
+  { name: "Purple", value: "Purple", class: "bg-slate-900 hover:bg-slate-700 ring-slate-900" },
   { name: "Yellow", value: "Yellow", class: "bg-yellow-500 hover:bg-yellow-600 ring-yellow-500" },
   { name: "Orange", value: "Orange", class: "bg-orange-500 hover:bg-orange-600 ring-orange-500" }
 ];

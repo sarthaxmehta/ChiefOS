@@ -407,6 +407,33 @@ function ChiefChatArea({ selectedDate, userName, userEmail, onHistoryRefresh }: 
                 onSend={handleSendMessage}
                 inputRef={inputRef}
               />
+
+              {/* Quick-action suggestion chips */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6, duration: 0.4 }}
+                className="flex flex-wrap items-center justify-center gap-2 mt-4"
+              >
+                {[
+                  { label: "What's my day like?", icon: "📅" },
+                  { label: "Add a quick task", icon: "✚" },
+                  { label: "Show pending missions", icon: "🎯" },
+                  { label: "Give me a status report", icon: "📊" },
+                ].map((chip, i) => (
+                  <motion.button
+                    key={chip.label}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.65 + i * 0.07, duration: 0.3 }}
+                    onClick={() => handleSendMessage(chip.label)}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white/70 dark:bg-slate-900/60 backdrop-blur-md border border-slate-200/60 dark:border-white/10 text-[11px] font-bold text-slate-600 dark:text-slate-300 hover:bg-white hover:border-orange-300/50 hover:text-orange-700 dark:hover:bg-slate-900 dark:hover:text-orange-400 transition-all duration-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:scale-95 cursor-pointer select-none"
+                  >
+                    <span className="text-sm leading-none">{chip.icon}</span>
+                    {chip.label}
+                  </motion.button>
+                ))}
+              </motion.div>
             </div>
           </motion.div>
         )}

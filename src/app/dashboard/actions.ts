@@ -547,3 +547,42 @@ export async function cleanupPastMissions() {
     revalidatePath("/dashboard/missions");
   }
 }
+
+export async function duplicateMission(missionId: string) {
+  const userId = await getUserId();
+  const original = await prisma.mission.findFirst({
+    where: { id: missionId, userId },
+    include: { subMissions: true }
+  });
+  if (!original) throw new Error("Mission not found or unauthorized");
+
+  const duplicated = await prisma.mission.create({
+    data: {
+      title: `${original.title} (Copy)`,
+      description: original.description,
+      date: original.date,
+      estimatedMinutes: original.estimatedMinutes,
+      priority: original.priority,
+      category: original.category,
+      color: original.color,
+      notes: original.notes,
+      recurringRule: original.recurringRule,
+      tags: original.tags,
+      userId,
+      subMissions: {
+        create: original.subMissions.map((sm, idx) => ({
+          title: sm.title,
+          description: sm.description,
+          estimatedMinutes: sm.estimatedMinutes,
+          priority: sm.priority,
+          order: idx
+        }))
+      }
+    }
+  });
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/missions");
+  return duplicated;
+}
+

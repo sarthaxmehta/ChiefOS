@@ -12,7 +12,7 @@ const COLORS = [
   { name: "Red", value: "Red", class: "bg-red-500 hover:bg-red-600 ring-red-500" },
   { name: "Blue", value: "Blue", class: "bg-blue-500 hover:bg-blue-600 ring-blue-500" },
   { name: "Green", value: "Green", class: "bg-green-500 hover:bg-green-600 ring-green-500" },
-  { name: "Purple", value: "Purple", class: "bg-purple-500 hover:bg-purple-600 ring-purple-500" },
+  { name: "Purple", value: "Purple", class: "bg-slate-900 hover:bg-slate-700 ring-slate-900" },
   { name: "Yellow", value: "Yellow", class: "bg-yellow-500 hover:bg-yellow-600 ring-yellow-500" },
   { name: "Orange", value: "Orange", class: "bg-orange-500 hover:bg-orange-600 ring-orange-500" }
 ];
@@ -574,7 +574,7 @@ export function TaskCreationDrawer({ isOpen, onClose, initialDate, taskToEdit }:
                   color === "Red" ? "border-l-red-500" :
                   color === "Blue" ? "border-l-blue-500" :
                   color === "Green" ? "border-l-green-500" :
-                  color === "Purple" ? "border-l-purple-500" :
+                  color === "Purple" ? "border-l-slate-800" :
                   color === "Yellow" ? "border-l-yellow-500" :
                   color === "Orange" ? "border-l-orange-500" : "border-l-primary"
                 }`}
@@ -634,7 +634,7 @@ export function TaskCreationDrawer({ isOpen, onClose, initialDate, taskToEdit }:
               {taskToEdit ? (
                 <button 
                   onClick={() => handleSave(false)} 
-                  className="px-6 py-2.5 text-sm font-semibold bg-primary text-white rounded-xl hover:opacity-90 transition-opacity shadow-md shadow-primary/20"
+                  className="px-6 py-2.5 text-sm font-semibold bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl hover:opacity-90 transition-opacity shadow-md shadow-black/20"
                 >
                   Update Task
                 </button>
@@ -648,7 +648,7 @@ export function TaskCreationDrawer({ isOpen, onClose, initialDate, taskToEdit }:
                   </button>
                   <button 
                     onClick={() => handleSave(true)}
-                    className="px-6 py-2.5 text-sm font-semibold bg-primary text-white rounded-xl hover:opacity-90 transition-opacity shadow-md shadow-primary/20"
+                    className="px-6 py-2.5 text-sm font-semibold bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl hover:opacity-90 transition-opacity shadow-md shadow-black/20"
                   >
                     Save & Schedule
                   </button>

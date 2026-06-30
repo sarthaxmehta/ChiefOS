@@ -1,12 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowLeft, Clock, Calendar, CheckSquare, Activity, Settings2, Trash2, Files, MoreHorizontal, BrainCircuit, ChevronDown } from "lucide-react";
+import { useState, useEffect } from "react";
+import { 
+  ArrowLeft, Clock, Calendar, CheckSquare, Activity, Settings2, Trash2, 
+  Files, MoreHorizontal, BrainCircuit, ChevronDown, Circle, CheckCircle2 
+} from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { GenerateSubMissionsButton } from "./ClientActions";
-
-// This page requires client-side state for tabs and dropdown
-// Mission data is passed as props from the server wrapper
+import { toggleSubTaskStatus, deleteMission, duplicateMission } from "@/app/dashboard/actions";
+import { TaskCreationDrawer } from "@/components/task-creation-drawer";
 
 interface SubMission {
   id: string;
@@ -29,6 +33,8 @@ interface Mission {
   description: string | null;
   context: string | null;
   date: Date | null;
+  startTime: Date | null;
+  endTime: Date | null;
   estimatedMinutes: number | null;
   energyRequired: string;
   priority: string;
@@ -36,14 +42,35 @@ interface Mission {
   missionScore: number;
   subMissions: SubMission[];
   activities: MissionActivity[];
+  type: string;
+  category: string | null;
+  color: string;
+  tags: string | null;
+  notes: string | null;
+  recurringRule: string | null;
 }
 
 const TABS = ["Subtasks", "Timeline", "Notes", "Activity", "AI Analysis"] as const;
 type Tab = typeof TABS[number];
 
-export function MissionWorkspace({ mission }: { mission: Mission }) {
+export function MissionWorkspace({ mission: initialMission }: { mission: Mission }) {
+  const [mission, setMission] = useState<Mission>(initialMission);
   const [activeTab, setActiveTab] = useState<Tab>("Subtasks");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showEditDrawer, setShowEditDrawer] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    setMission(initialMission);
+  }, [initialMission]);
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      window.location.reload();
+    };
+    window.addEventListener("task-updated", handleUpdate);
+    return () => window.removeEventListener("task-updated", handleUpdate);
+  }, []);
 
   const formatDate = (d: Date | null) => {
     if (!d) return "No deadline";
@@ -52,6 +79,51 @@ export function MissionWorkspace({ mission }: { mission: Mission }) {
 
   const formatTime = (d: Date) => {
     return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(d));
+  };
+
+  const handleToggleSubtask = async (subTaskId: string, currentStatus: string) => {
+    const newStatus = currentStatus === "Completed" ? "Pending" : "Completed";
+
+    // Optimistic UI update
+    setMission(prev => ({
+      ...prev,
+      subMissions: prev.subMissions.map(sm => 
+        sm.id === subTaskId ? { ...sm, status: newStatus } : sm
+      )
+    }));
+
+    try {
+      await toggleSubTaskStatus(subTaskId, newStatus);
+      toast.success("Subtask status updated!");
+    } catch (e) {
+      toast.error("Failed to update subtask");
+      // Revert if error
+      setMission(initialMission);
+    }
+  };
+
+  const handleDeleteMission = async () => {
+    setMenuOpen(false);
+    if (confirm("Are you sure you want to delete this mission?")) {
+      try {
+        await deleteMission(mission.id);
+        toast.success("Mission deleted successfully!");
+        router.push("/dashboard/missions");
+      } catch (e) {
+        toast.error("Failed to delete mission.");
+      }
+    }
+  };
+
+  const handleDuplicateMission = async () => {
+    setMenuOpen(false);
+    try {
+      const duplicated = await duplicateMission(mission.id);
+      toast.success("Mission duplicated successfully!");
+      router.push(`/dashboard/missions/${duplicated.id}`);
+    } catch (e) {
+      toast.error("Failed to duplicate mission.");
+    }
   };
 
   return (
@@ -64,20 +136,32 @@ export function MissionWorkspace({ mission }: { mission: Mission }) {
         <div className="relative">
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors cursor-pointer"
           >
             <MoreHorizontal className="w-4 h-4" />
           </button>
           {menuOpen && (
             <div className="absolute right-0 top-full mt-1 w-48 bg-popover border border-border rounded-xl shadow-lg z-50 py-1 overflow-hidden">
-              <button onClick={() => setMenuOpen(false)} className="w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-muted transition-colors text-left">
+              <button 
+                onClick={() => {
+                  setMenuOpen(false);
+                  setShowEditDrawer(true);
+                }} 
+                className="w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-muted transition-colors text-left cursor-pointer"
+              >
                 <Settings2 className="w-4 h-4" /> Edit Mission
               </button>
-              <button onClick={() => setMenuOpen(false)} className="w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-muted transition-colors text-left">
+              <button 
+                onClick={handleDuplicateMission} 
+                className="w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-muted transition-colors text-left cursor-pointer"
+              >
                 <Files className="w-4 h-4" /> Duplicate
               </button>
               <div className="h-px bg-border my-1" />
-              <button onClick={() => setMenuOpen(false)} className="w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-destructive/10 text-destructive transition-colors text-left">
+              <button 
+                onClick={handleDeleteMission} 
+                className="w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-destructive/10 text-destructive transition-colors text-left cursor-pointer"
+              >
                 <Trash2 className="w-4 h-4" /> Delete Mission
               </button>
             </div>
@@ -117,7 +201,7 @@ export function MissionWorkspace({ mission }: { mission: Mission }) {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px cursor-pointer ${
                 activeTab === tab
                   ? "border-primary text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground"
@@ -150,11 +234,16 @@ export function MissionWorkspace({ mission }: { mission: Mission }) {
               ) : (
                 mission.subMissions.map((sub) => (
                   <div key={sub.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors group">
-                    <input
-                      type="checkbox"
-                      className="w-4 h-4 rounded border-border accent-primary cursor-pointer"
-                      defaultChecked={sub.status === "Completed"}
-                    />
+                    <button
+                      onClick={() => handleToggleSubtask(sub.id, sub.status)}
+                      className="text-slate-400 hover:text-slate-650 dark:hover:text-slate-200 transition-colors cursor-pointer shrink-0"
+                    >
+                      {sub.status === "Completed" ? (
+                        <CheckCircle2 className="w-5 h-5 text-primary fill-primary/10" />
+                      ) : (
+                        <Circle className="w-5 h-5 text-slate-350 dark:text-slate-650 hover:text-primary transition-all duration-200" />
+                      )}
+                    </button>
                     <div className="flex-1 min-w-0">
                       <p className={`font-medium text-sm ${sub.status === "Completed" ? "line-through text-muted-foreground" : ""}`}>
                         {sub.title}
@@ -193,6 +282,7 @@ export function MissionWorkspace({ mission }: { mission: Mission }) {
             <textarea
               className="w-full h-full min-h-[260px] bg-transparent border-none resize-none focus:outline-none text-sm placeholder:text-muted-foreground"
               placeholder="Add mission notes, research links, or scratchpad thoughts..."
+              defaultValue={mission.notes || ""}
             />
           </div>
         )}
@@ -227,13 +317,21 @@ export function MissionWorkspace({ mission }: { mission: Mission }) {
               Based on the estimated effort and energy level, schedule this during your peak focus hours for best results.
             </p>
             <Link href="/dashboard/schedule">
-              <button className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors">
+              <button className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-medium hover:opacity-90 transition-colors cursor-pointer">
                 <Calendar className="w-4 h-4" /> Schedule on Calendar
               </button>
             </Link>
           </div>
         )}
       </div>
+
+      {/* Task Creation Drawer in Edit mode */}
+      <TaskCreationDrawer
+        isOpen={showEditDrawer}
+        onClose={() => setShowEditDrawer(false)}
+        taskToEdit={mission}
+      />
     </div>
   );
 }
+

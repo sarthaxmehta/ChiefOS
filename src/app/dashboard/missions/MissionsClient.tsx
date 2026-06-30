@@ -53,7 +53,7 @@ const COLOR_MAP: Record<string, { border: string, bg: string, text: string, badg
   Red:    { border: "border-l-red-500",    bg: "bg-red-500/[0.02] dark:bg-red-500/[0.03] hover:bg-red-500/[0.04]",    text: "text-red-700 dark:text-red-300",    badge: "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/20" },
   Blue:   { border: "border-l-blue-500",   bg: "bg-blue-500/[0.02] dark:bg-blue-500/[0.03] hover:bg-blue-500/[0.04]",  text: "text-blue-700 dark:text-blue-300",  badge: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20" },
   Green:  { border: "border-l-emerald-500",bg: "bg-emerald-500/[0.02] dark:bg-emerald-500/[0.03] hover:bg-emerald-500/[0.04]", text: "text-emerald-700 dark:text-emerald-300", badge: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20" },
-  Purple: { border: "border-l-purple-500", bg: "bg-purple-500/[0.02] dark:bg-purple-500/[0.03] hover:bg-purple-500/[0.04]",text: "text-purple-700 dark:text-purple-300",badge: "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/20" },
+  Purple: { border: "border-l-slate-800", bg: "bg-slate-800/[0.02] dark:bg-slate-800/[0.03] hover:bg-slate-800/[0.04]",text: "text-slate-800 dark:text-slate-200",badge: "bg-slate-800/10 text-slate-800 dark:text-slate-200 border-slate-800/20" },
   Yellow: { border: "border-l-amber-500",  bg: "bg-amber-500/[0.02] dark:bg-amber-500/[0.03] hover:bg-amber-500/[0.04]",  text: "text-amber-700 dark:text-amber-300",  badge: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20" },
   Orange: { border: "border-l-orange-500", bg: "bg-orange-500/[0.02] dark:bg-orange-500/[0.03] hover:bg-orange-500/[0.04]",text: "text-orange-700 dark:text-orange-300",badge: "bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/20" }
 };
@@ -232,7 +232,7 @@ export function MissionsClient({ initialMissions }: MissionsClientProps) {
 
             <button
               onClick={() => setIsDrawerOpen(true)}
-              className="flex items-center gap-2 bg-primary text-white text-xs font-bold px-5 py-2.5 rounded-full hover:opacity-95 active:scale-95 transition-all shadow-lg shadow-primary/30 hover:shadow-primary/45 cursor-pointer"
+              className="flex items-center gap-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-bold px-5 py-2.5 rounded-full hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-black/20 cursor-pointer"
             >
               <Plus className="w-4 h-4" /> New Task
             </button>
@@ -240,12 +240,51 @@ export function MissionsClient({ initialMissions }: MissionsClientProps) {
         </div>
 
         {/* Kanban Board columns layout */}
+        {missions.length === 0 ? (
+          <div className="flex-1 flex items-center justify-center min-h-0">
+            <div className="flex flex-col items-center justify-center text-center gap-6 max-w-md select-none">
+              {/* Animated icon badge */}
+              <div className="relative">
+                <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-primary/10 via-accent/10 to-primary/5 border border-primary/10 flex items-center justify-center shadow-xl shadow-primary/5">
+                  <Sparkles className="w-10 h-10 text-primary/60 animate-pulse" />
+                </div>
+                <div className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-amber-400 border-2 border-white dark:border-slate-950 flex items-center justify-center shadow-sm">
+                  <Plus className="w-3.5 h-3.5 text-white" />
+                </div>
+              </div>
+
+              {/* Copy */}
+              <div className="space-y-2">
+                <h3 className="text-2xl font-extrabold tracking-tight text-slate-800 dark:text-white">
+                  No missions yet
+                </h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 font-medium leading-relaxed max-w-xs mx-auto">
+                  Your command center is ready. Add your first task and ChiefOS will orchestrate the rest.
+                </p>
+              </div>
+
+              {/* Suggested quick actions */}
+              <div className="flex flex-col gap-2 w-full max-w-xs">
+                <button
+                  onClick={() => setIsDrawerOpen(true)}
+                  className="w-full flex items-center justify-center gap-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-bold px-6 py-3.5 rounded-2xl hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-black/20 cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create your first mission
+                </button>
+                <p className="text-[10px] text-slate-400 dark:text-slate-600 font-semibold text-center tracking-wider uppercase">
+                  Or ask Chief to create tasks for you
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 flex-1 min-h-0 overflow-x-auto pb-4">
           {/* Column 1: Today's Plan */}
           <BoardColumn
             title="Today's Plan"
             tasks={columns.today}
-            badgeColor="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-200/30 dark:border-purple-800/20"
+            badgeColor="bg-slate-800/10 text-slate-800 dark:bg-slate-200/10 dark:text-slate-200 border border-slate-800/20 dark:border-slate-200/10"
             onToggleStatus={handleToggleStatus}
             onDelete={handleDeleteTask}
             onReschedule={handleReschedule}
@@ -281,6 +320,7 @@ export function MissionsClient({ initialMissions }: MissionsClientProps) {
             onReschedule={handleReschedule}
           />
         </div>
+        )}
 
       </div>
 

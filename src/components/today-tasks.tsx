@@ -21,7 +21,7 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   Work: <Briefcase className="w-3.5 h-3.5 text-blue-500" />,
   Study: <BookOpen className="w-3.5 h-3.5 text-indigo-500" />,
   Health: <Heart className="w-3.5 h-3.5 text-red-500" />,
-  Personal: <User className="w-3.5 h-3.5 text-purple-500" />,
+  Personal: <User className="w-3.5 h-3.5 text-slate-600" />,
   Finance: <Coins className="w-3.5 h-3.5 text-emerald-500" />,
   Payment: <DollarSign className="w-3.5 h-3.5 text-amber-500" />,
   Custom: <Tag className="w-3.5 h-3.5 text-slate-500" />
@@ -36,7 +36,7 @@ const PRESET_BORDERS: Record<string, string> = {
   Red: "border-l-red-500",
   Blue: "border-l-blue-500",
   Green: "border-l-emerald-500",
-  Purple: "border-l-purple-500",
+  Purple: "border-l-slate-800",
   Yellow: "border-l-amber-500",
   Orange: "border-l-orange-500"
 };

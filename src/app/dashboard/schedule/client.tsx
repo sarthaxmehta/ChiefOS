@@ -52,7 +52,7 @@ const COLOR_MAP: Record<string, { border: string, bg: string, text: string, indi
   Red:    { border: "border-l-red-500",    bg: "bg-red-500/10 dark:bg-red-500/15",    text: "text-red-700 dark:text-red-300",    indicator: "bg-red-500" },
   Blue:   { border: "border-l-blue-500",   bg: "bg-blue-500/10 dark:bg-blue-500/15",  text: "text-blue-700 dark:text-blue-300",  indicator: "bg-blue-500" },
   Green:  { border: "border-l-emerald-500",bg: "bg-emerald-500/10 dark:bg-emerald-500/15", text: "text-emerald-700 dark:text-emerald-300", indicator: "bg-emerald-500" },
-  Purple: { border: "border-l-purple-500", bg: "bg-purple-500/10 dark:bg-purple-500/15",text: "text-purple-700 dark:text-purple-300",indicator: "bg-purple-500" },
+  Purple: { border: "border-l-slate-800", bg: "bg-slate-800/10 dark:bg-slate-200/10",text: "text-slate-800 dark:text-slate-200",indicator: "bg-slate-800 dark:bg-slate-200" },
   Yellow: { border: "border-l-amber-500",  bg: "bg-amber-500/10 dark:bg-amber-500/15",  text: "text-amber-700 dark:text-amber-300",  indicator: "bg-amber-500" },
   Orange: { border: "border-l-orange-500", bg: "bg-orange-500/10 dark:bg-orange-500/15",text: "text-orange-700 dark:text-orange-300",indicator: "bg-orange-500" }
 };
@@ -371,86 +371,88 @@ export function ScheduleClient({ initialEvents, initialUnplannedTasks = [] }: Sc
             </div>
           </div>
 
-        {/* Floating Card Body Grid (Scrollable) */}
-        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto mt-6 pr-1 custom-scrollbar min-h-0">
+        {/* Floating Card Body */}
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           
           {/* Day & Week View Layout */}
           {(viewMode === "day" || viewMode === "week") && (
             <div className="flex flex-col h-full min-w-[750px] md:min-w-0">
-              
-              {/* Day Columns Header */}
-              <div className="flex select-none border-b border-slate-100 dark:border-white/5 pb-3">
-                {/* Hours placeholder margin */}
-                <div className="w-16 md:w-20 shrink-0" />
-                
-                {/* Headers */}
-                <div className="flex-grow flex">
-                  {viewMode === "week" ? (
-                    weekDays.map((day, idx) => {
-                      const active = isToday(day);
-                      return (
-                        <div key={idx} className="flex-grow flex-1 flex flex-col items-center border-r border-slate-200 dark:border-white/10 last:border-r-0">
-                          <span className={`text-[10px] font-extrabold uppercase tracking-widest ${active ? "text-primary" : "text-slate-400 dark:text-slate-600"}`}>
-                            {format(day, "EEEE")}
-                          </span>
-                          <span className={`text-2xl font-black mt-0.5 w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                            active 
-                              ? "bg-primary text-white shadow-lg shadow-primary/30" 
-                              : "text-slate-800 dark:text-slate-200"
-                          }`}>
-                            {format(day, "d")}
-                          </span>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="flex-grow flex flex-col items-center">
-                      <span className="text-xs font-extrabold uppercase tracking-widest text-primary">
-                        {format(cDate, "EEEE")}
-                      </span>
-                      <span className="text-3xl font-black mt-0.5 bg-primary text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg shadow-primary/30">
-                        {format(cDate, "d")}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
 
-              {/* Unscheduled Date-Specific Tasks Row (All-Day / Planned without Time) */}
-              <div className="flex select-none border-b border-slate-200 dark:border-white/10 py-3 bg-slate-50/30 dark:bg-slate-900/10 shrink-0">
-                {/* Hours placeholder margin */}
-                <div className="w-16 md:w-20 shrink-0" />
-                
-                {/* Task Columns */}
-                <div className="flex-grow flex">
-                  {viewMode === "week" ? (
-                    weekDays.map((day, idx) => {
-                      const tasksForDay = unplannedTasks.filter(t => isSameDay(new Date(t.date), day));
-                      return (
-                        <div key={idx} className="flex-grow flex-1 flex flex-col gap-1.5 px-3 border-r border-slate-200 dark:border-white/10 last:border-r-0 min-h-[40px] justify-center">
-                          {tasksForDay.length > 0 ? (
-                            tasksForDay.map(task => (
-                              <UnplannedTaskPill key={task.id} task={task} />
-                            ))
-                          ) : null}
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="flex-grow flex flex-col gap-1.5 px-4 min-h-[40px] justify-center">
-                      {unplannedTasks.filter(t => isSameDay(new Date(t.date), cDate)).length > 0 ? (
-                        unplannedTasks.filter(t => isSameDay(new Date(t.date), cDate)).map(task => (
-                          <UnplannedTaskPill key={task.id} task={task} />
-                        ))
-                      ) : null}
-                    </div>
-                  )}
+              {/* ── Sticky Column Headers (outside scroll) ── */}
+              <div className="shrink-0 border-b border-slate-200 dark:border-white/10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md">
+
+                {/* Day Names + Date Numbers */}
+                <div className="flex select-none pb-3 pt-1">
+                  <div className="w-16 md:w-20 shrink-0" />
+                  <div className="flex-grow flex">
+                    {viewMode === "week" ? (
+                      weekDays.map((day, idx) => {
+                        const active = isToday(day);
+                        return (
+                          <div key={idx} className="flex-grow flex-1 flex flex-col items-center border-r border-slate-200/60 dark:border-white/10 last:border-r-0">
+                            <span className={`text-[10px] font-extrabold uppercase tracking-widest ${
+                              active ? "text-slate-900 dark:text-white" : "text-slate-500 dark:text-slate-400"
+                            }`}>
+                              {format(day, "EEE")}
+                            </span>
+                            <span className={`text-2xl font-black mt-0.5 w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                              active
+                                ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-lg shadow-black/20"
+                                : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                            }`}>
+                              {format(day, "d")}
+                            </span>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="flex-grow flex flex-col items-center">
+                        <span className="text-xs font-extrabold uppercase tracking-widest text-slate-700 dark:text-slate-200">
+                          {format(cDate, "EEEE")}
+                        </span>
+                        <span className="text-3xl font-black mt-0.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 w-12 h-12 rounded-full flex items-center justify-center shadow-lg shadow-black/20">
+                          {format(cDate, "d")}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
+
+                {/* All-Day / Unscheduled Tasks Row */}
+                <div className="flex select-none border-t border-slate-200/60 dark:border-white/10 py-2 bg-slate-50/40 dark:bg-slate-900/20">
+                  <div className="w-16 md:w-20 shrink-0" />
+                  <div className="flex-grow flex">
+                    {viewMode === "week" ? (
+                      weekDays.map((day, idx) => {
+                        const tasksForDay = unplannedTasks.filter(t => isSameDay(new Date(t.date), day));
+                        return (
+                          <div key={idx} className="flex-grow flex-1 flex flex-col gap-1.5 px-3 border-r border-slate-200/60 dark:border-white/10 last:border-r-0 min-h-[32px] justify-center">
+                            {tasksForDay.map(task => (
+                              <UnplannedTaskPill key={task.id} task={task} />
+                            ))}
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="flex-grow flex flex-col gap-1.5 px-4 min-h-[32px] justify-center">
+                        {unplannedTasks.filter(t => isSameDay(new Date(t.date), cDate)).map(task => (
+                          <UnplannedTaskPill key={task.id} task={task} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
               </div>
+              {/* ── End Sticky Headers ── */}
+
+              {/* Scrollable time grid */}
+              <div ref={scrollContainerRef} className="flex-1 overflow-y-auto custom-scrollbar min-h-0 pr-1">
 
               {/* Scrollable Hours Grid */}
-              <div 
-                className="relative flex" 
+
+              <div
+                className="relative flex"
                 style={{ height: `${totalHours * hourRowHeight}px` }}
               >
                 
@@ -623,7 +625,10 @@ export function ScheduleClient({ initialEvents, initialUnplannedTasks = [] }: Sc
 
                 </div>
 
+                </div>
+
               </div>
+              {/* end inner scroll container */}
 
             </div>
           )}
@@ -669,7 +674,7 @@ export function ScheduleClient({ initialEvents, initialUnplannedTasks = [] }: Sc
                       <div className="flex justify-between items-start mb-1.5">
                         <span className={`text-xs font-black w-6 h-6 rounded-full flex items-center justify-center ${
                           active 
-                            ? "bg-primary text-white shadow-md shadow-primary/20" 
+                            ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-md shadow-black/20" 
                             : isCurrentMonth 
                               ? "text-slate-800 dark:text-slate-200" 
                               : "text-slate-400 dark:text-slate-700"
@@ -678,7 +683,7 @@ export function ScheduleClient({ initialEvents, initialUnplannedTasks = [] }: Sc
                         </span>
                         
                         {combinedItems.length > 0 && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-900 dark:bg-white" />
                         )}
                       </div>
 

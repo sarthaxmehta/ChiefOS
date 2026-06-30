@@ -12,8 +12,8 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.14 0.01 240);
 
-  /* Aesthetic Pastels */
-  --primary: oklch(0.6 0.15 280); /* Vibrant Indigo */
+  /* Monochrome Executive Palette */
+  --primary: oklch(0.13 0.01 240); /* Near-black slate */
   --primary-foreground: oklch(1 0 0);
   
   --secondary: oklch(0.96 0.01 240); /* Light slate */
@@ -22,7 +22,7 @@
   --muted: oklch(0.96 0.01 240);
   --muted-foreground: oklch(0.55 0.02 240);
 
-  --accent: oklch(0.65 0.15 310); /* Soft Pink/Purple */
+  --accent: oklch(0.28 0.01 240); /* Dark slate accent */
   --accent-foreground: oklch(1 0 0);
 
   --success: oklch(0.65 0.15 150); /* Soft Teal/Green */
@@ -36,12 +36,12 @@
 
   --border: oklch(0.92 0.01 240);
   --input: oklch(0.92 0.01 240);
-  --ring: oklch(0.6 0.15 280);
+  --ring: oklch(0.13 0.01 240);
 
-  --chart-1: oklch(0.65 0.15 280);
+  --chart-1: oklch(0.13 0.01 240);
   --chart-2: oklch(0.65 0.15 150);
   --chart-3: oklch(0.8 0.15 80);
-  --chart-4: oklch(0.65 0.15 310);
+  --chart-4: oklch(0.45 0.01 240);
   --chart-5: oklch(0.65 0.18 20);
 
   --radius: 1rem;
@@ -57,8 +57,8 @@
   --popover: oklch(0.08 0 0);
   --popover-foreground: oklch(0.985 0 0);
 
-  --primary: oklch(0.6 0.15 280);
-  --primary-foreground: oklch(1 0 0);
+  --primary: oklch(0.92 0.01 240); /* Near-white in dark mode = light black pill */
+  --primary-foreground: oklch(0.08 0.01 240);
 
   --secondary: oklch(0.15 0 0);
   --secondary-foreground: oklch(0.985 0 0);
@@ -66,8 +66,8 @@
   --muted: oklch(0.15 0 0);
   --muted-foreground: oklch(0.6 0 0);
 
-  --accent: oklch(0.65 0.15 310);
-  --accent-foreground: oklch(1 0 0);
+  --accent: oklch(0.82 0.01 240);
+  --accent-foreground: oklch(0.1 0.01 240);
 
   --success: oklch(0.65 0.15 150);
   --success-foreground: oklch(1 0 0);
@@ -80,12 +80,12 @@
 
   --border: oklch(0.2 0 0);
   --input: oklch(0.2 0 0);
-  --ring: oklch(0.6 0.15 280);
+  --ring: oklch(0.92 0.01 240);
 
-  --chart-1: oklch(0.65 0.15 280);
+  --chart-1: oklch(0.92 0.01 240);
   --chart-2: oklch(0.65 0.15 150);
   --chart-3: oklch(0.8 0.15 80);
-  --chart-4: oklch(0.65 0.15 310);
+  --chart-4: oklch(0.65 0.01 240);
   --chart-5: oklch(0.65 0.18 20);
 }
 

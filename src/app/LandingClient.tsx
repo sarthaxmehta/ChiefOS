@@ -469,13 +469,12 @@ export default function LandingClient({ session }: LandingClientProps) {
         </section>
       </main>
 
-      <footer className="w-full bg-[#faf8f5]/80 border-t border-neutral-200/40 py-12 px-6 z-10 relative text-center text-xs text-neutral-500 font-semibold">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-          <p>© {new Date().getFullYear()} ChiefOS. All rights reserved.</p>
-          <div className="flex gap-6">
-            <Link href="#" className="hover:text-neutral-950 transition-colors">Privacy Policy</Link>
-            <Link href="#" className="hover:text-neutral-950 transition-colors">Terms of Service</Link>
-            <Link href="#" className="hover:text-neutral-950 transition-colors">Contact</Link>
+      <footer className="w-full bg-[#faf8f5]/80 border-t border-neutral-200/40 py-10 px-6 z-10 relative text-center text-xs text-neutral-500 font-semibold">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+          <p>© {new Date().getFullYear()} ChiefOS. Built for the future of focused work.</p>
+          <div className="flex items-center gap-2 text-[10px] font-black tracking-widest uppercase text-neutral-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
+            AI Systems Online
           </div>
         </div>
       </footer>
